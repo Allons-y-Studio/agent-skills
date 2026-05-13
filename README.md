@@ -5,58 +5,48 @@
 [![npm downloads](https://img.shields.io/npm/dw/@allons-y/agent-skills?logo=npm)](https://www.npmjs.com/package/@allons-y/agent-skills)
 [![Coverage][coverage-image]][coverage-url]
 [![Node](https://img.shields.io/badge/node-%3E%3D24-brightgreen?logo=node.js)](https://nodejs.org)
-[![Python](https://img.shields.io/badge/python-3.13-blue?logo=python)](https://python.org)
 [![Conventional Commits][conventional-commits-image]][conventional-commits-url]
 
-**Specialized agent skills for Claude that streamline common developer workflows and reduce token usage.**
+**Specialized agent skills that streamline common developer workflows and reduce token usage.**
 
-Each skill is a self-contained directory with a `SKILL.md`, Python implementation scripts, and a test suite — installable directly into Claude Code via the plugin system or via `npx`.
+Each skill is a self-contained directory with a `SKILL.md`, Node.js implementation scripts, and a test suite. Claude Code installs natively via the plugin marketplace; other agent harnesses can vendor any skill directory via `npx`.
 
 ---
 
 ## Quick Start
 
-### Option A — Claude Code Plugin (recommended)
+### Claude Code (recommended)
 
-Register this repository as a marketplace, then install individual skills or all of them at once:
+Register this repository as a marketplace, then install individual skills through the `/plugin` UI:
 
 ```sh
 /plugin marketplace add castastrophe/agent-skills
-```
-
-Install a specific skill:
-
-```sh
 /plugin install gh-notification-summary@agent-skills
 ```
 
-Install everything:
+Claude Code clones the repo, mounts each skill directory, and surfaces them under `/plugin` for enable/disable.
 
-```sh
-/plugin install agent-skills@agent-skills
-```
+### Other agent harnesses (Cursor, OpenCode, Aider, custom SDK)
 
-### Option B — npx one-liner
-
-No clone or install required:
+Use the `npx` installer to vendor a skill directory into any agent's skill folder. The installed payload is a plain directory with `SKILL.md` + scripts — no Claude-specific wiring.
 
 ```sh
 # List available skills
 npx @allons-y/agent-skills
 
-# Install a specific skill to ~/.claude/skills/
+# Install a skill to the default location (~/.claude/skills/)
 npx @allons-y/agent-skills gh-notification-summary
+
+# Install to your agent's skill directory
+npx @allons-y/agent-skills gh-notification-summary --dir ~/.config/cursor/skills
 
 # Install all skills
 npx @allons-y/agent-skills --all
-
-# Install to a custom directory
-npx @allons-y/agent-skills gh-notification-summary --dir ~/my-skills
 ```
 
-### Option C — Manual
+For Node-runtime skills with dependencies, run `npm install` in the installed directory once it's vendored.
 
-Download the `.zip` from the [npm package](https://www.npmjs.com/package/@allons-y/agent-skills) or [GitHub releases](https://github.com/castastrophe/agent-skills/releases) and unzip into `~/.claude/skills/<skill-name>/`.
+> **Note:** `.zip`-based distribution is deprecated and will be removed in the next major version. The installer now copies the skill directory directly.
 
 ---
 
@@ -80,7 +70,6 @@ const skills = getSkills();
 //   {
 //     name: 'gh-notification-summary',
 //     path: '/path/to/skills/gh-notification-summary',
-//     zipPath: '/path/to/skills/gh-notification-summary.zip',
 //     description: 'Review, summarize, and manage GitHub notifications...',
 //     mdPath: '/path/to/skills/gh-notification-summary/SKILL.md'
 //   }
@@ -94,8 +83,7 @@ const skills = getSkills();
 ### Prerequisites
 
 - Node.js (v24), supports `nvm use`
-- Yarn
-- [uv](https://docs.astral.sh/uv/) (Python package manager — handles Python version and dependency management)
+- Yarn 4 (via Corepack)
 
 ### Installation
 
@@ -118,7 +106,7 @@ Or run across all skills at once:
 yarn workspaces foreach -A run test
 ```
 
-For full setup instructions — including Python virtual environments, running tests, linting, evals, and publishing — see [CONTRIBUTING.md](CONTRIBUTING.md).
+For full setup instructions — running tests, linting, evals, and publishing — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 
@@ -129,19 +117,18 @@ agent-skills/                         # Root workspace (publishes to npm)
 ├── package.json                      # workspaces: ["skills/*"]
 ├── index.js                          # Exports getSkills()
 ├── bin/install.js                    # npx installer CLI
+├── .claude-plugin/
+│   ├── marketplace.json              # Auto-generated Claude Code marketplace
+│   └── plugin.json                   # Auto-generated plugin manifest
 ├── scripts/                          # Root orchestration scripts
-│   ├── run-tests.js                  # Parallel pytest runner
-│   ├── bundle-skills.js              # Zips skills for distribution
-│   ├── generate-agent-yaml.js        # Generates agent.yaml
-│   └── generate-plugin-manifest.js   # Generates marketplace.json
+│   ├── run-tests.js                  # Parallel Node test runner
+│   └── generate-plugin-manifest.js   # Generates .claude-plugin/*.json
 ├── skills/                           # Yarn workspace members
 │   └── <skill-name>/                 # Each skill is a workspace
-│       ├── package.json              # private: true, skill-level scripts
-│       ├── pyproject.toml            # mypy config
-│       ├── requirements.txt          # Python dependencies
+│       ├── package.json              # private: true; declares `skill.runtime`
 │       ├── SKILL.md                  # Metadata and usage docs
-│       ├── scripts/                  # Python implementation
-│       ├── tests/                    # pytest suite
+│       ├── scripts/                  # Node.js implementation
+│       ├── tests/                    # `node --test` suite
 │       └── evals/                    # Eval prompts (evals.json)
 └── .github/
     └── workflows/                    # CI and release automation
@@ -152,29 +139,27 @@ agent-skills/                         # Root workspace (publishes to npm)
 ## FAQ
 
 <details>
-<summary><b>What's inside a skill .zip file?</b></summary>
-
-The `.zip` contains the full skill directory: `SKILL.md`, all scripts, and the `requirements.txt`. It is structured so that unzipping it directly into `~/.claude/skills/<skill-name>/` gives you a ready-to-use skill with no further setup.
-
-</details>
-
-<details>
-<summary><b>How do I install a skill for use with Claude?</b></summary>
-
-**Via Claude Code (easiest):**
+<summary><b>How do I install a skill for use with Claude Code?</b></summary>
 
 ```sh
 /plugin marketplace add castastrophe/agent-skills
 /plugin install gh-notification-summary@agent-skills
 ```
 
-**Via npx:**
+Claude Code clones the repo, reads `.claude-plugin/marketplace.json`, and mounts each skill directory.
+
+</details>
+
+<details>
+<summary><b>Can I use these skills with agents other than Claude Code?</b></summary>
+
+Yes. Each skill is a plain directory with a `SKILL.md` (frontmatter: `name`, `description`) and a `scripts/` implementation. Use the `npx` installer to vendor a skill into any agent harness's skill folder:
 
 ```sh
-npx @allons-y/agent-skills gh-notification-summary
+npx @allons-y/agent-skills gh-notification-summary --dir <your-agent-skills-dir>
 ```
 
-**Manually:** unzip into `~/.claude/skills/gh-notification-summary/`. Claude detects `SKILL.md` automatically on next launch.
+Or call `getSkills()` from the package to enumerate skills programmatically.
 
 </details>
 

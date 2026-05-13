@@ -4,16 +4,19 @@
   "version": "0.0.0",
   "description": "Review, summarize, and manage GitHub notifications",
   "type": "module",
+  "skill": {
+    "runtime": "node"
+  },
   "bin": {
     "gh-notifications": "bin/cli.js"
   },
   "scripts": {
     "ci:test": "yarn coverage",
     "coverage": "c8 yarn test",
-    "format": "yarn node:format",
-    "lint": "yarn node:lint",
+    "format": "yarn package:format",
+    "lint": "yarn package:lint",
     "preview": "gh-notifications fetch",
-    "test": "node --test tests"
+    "test": "node --test \"tests/**/*.test.js\""
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.88.0",

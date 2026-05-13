@@ -1,867 +1,640 @@
 /**
- * GitHub notifications: helpers, enrichment cache, HTML build, HTTP handler bits.
- * CLI lives in `bin/cli.js`.
+ * GitHub notifications: pure helpers, enrichment, dashboard render, and a
+ * `Notifications` class that loads from real API or fixture data.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
-import { Octokit } from "@octokit/rest";
-import { createMockOctokit, loadOctokitFixtures } from "../tests/fixtures/octokit-mock.js";
-import { getCache } from "./caching.js";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-import "colors";
-import "dotenv/config";
+import { Cache, getCache } from "./caching.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+// ──────────────────────────────────────────────────────────────────────
+// Token / repo helpers
+// ──────────────────────────────────────────────────────────────────────
 
 /**
- * Mask a token for console output.
- *
  * @param {string} token
  * @returns {string}
  */
 export function maskToken(token) {
-	return token.slice(0, 4) + (token.length - 4 > 0 ? Array(token.length - 4).fill("*").join("") : "");
+	if (!token) return "";
+	return token.slice(0, 4) + "*".repeat(Math.max(0, token.length - 4));
 }
 
 /**
- * @typedef {object} NotificationsOptions
- * @property {string | undefined} [token] - The GitHub token to use, or undefined to use the default from the environment.
- * @property {boolean} [debug = false]
+ * Parse an "owner/repo" string. Malformed inputs return empty fields rather
+ * than throwing.
+ *
+ * @param {string} input
+ * @returns {{ owner: string, repo: string }}
  */
-export class Notifications {
-	/** @type {boolean} */
-	#debug = false;
-
-	/** @type {Record<string, unknown> | null} */
-	#testFixtures = null;
-
-	/** @type {NotificationItem[] | undefined} */
-	#notifications = [];
-
-	/** @type {import("./caching").Cache | null} */
-	#cache = null;
-
-	/** @type {number} */
-	#maximumAwait = 1000;
-
-	/**
-	 * Get the maximum await time.
-	 *
-	 * @returns {number}
-	 */
-	get maximumAwait() {
-		return this.#maximumAwait;
+export function parseRepo(input) {
+	if (typeof input !== "string") return { owner: "", repo: "" };
+	const cleaned = input
+		.trim()
+		.replace(/^https?:\/\//, "")
+		.replace(/^api\.github\.com\/repos\//, "")
+		.replace(/^\/+|\/+$/g, "");
+	const parts = cleaned.split("/");
+	if (parts.length !== 2 || !parts[0] || !parts[1]) {
+		return { owner: "", repo: "" };
 	}
-
-	/** @type {Anthropic | null} */
-	ai = null;
-
-	/**
-	 * Get the notifications.
-	 *
-	 * @returns {NotificationItem[]}
-	 */
-	get notifications() {
-		return this.#notifications;
-	}
-
-	/**
-	 * Set the notifications.
-	 *
-	 * @param {NotificationItem[]} value
-	 * @returns {void}
-	 */
-	set notifications(value) {
-		this.#notifications = value;
-	}
-
-	/**
-	 * Get the debug mode.
-	 *
-	 * @param {boolean} value
-	 * @returns {void}
-	 */
-	get debug() {
-		return this.#debug;
-	}
-
-	/**
-	 * Set the debug mode.
-	 *
-	 * @param {boolean} value
-	 * @returns {void}
-	 */
-	set debug(value) {
-		this.#debug = value;
-	}
-
-	/**
-	 * @param {{ owner: string, name: string }} repo
-	 * @param {string} number
-	 * @returns {string | undefined}
-	 */
-	getAISummaryFixture(repo, number) {
-		const map = this.#testFixtures?.getAISummaryByIssue;
-		if (!map || typeof map !== "object") return undefined;
-		const key = `${repo.owner}/${repo.name}#${number}`;
-		const v = /** @type {Record<string, string>} */ (map)[key];
-		return typeof v === "string" ? v : undefined;
-	}
-
-	/**
-	 * @type {(type: "info" | "debug" | "error" | "warn", message: string, functionName?: string) => Error | void}
-	 */
-	#log = (type, message, functionName = "") => {
-		const icon = type in ["info", "debug"] ? "i".blue : type === "error" ? "x".red : "!".yellow;
-		const prefix = `[Notifications${functionName ? `:${functionName}` : ""}]`.dim;
-		if (this.#debug && type in ["info", "debug"]) return `${prefix} ${icon} ${message}`;
-		else if (type in ["warn", "error"]) return `${prefix} ${icon} ${message}`;
-		return undefined;
-	};
-
-	/**
-	 * Connect to the GitHub API.
-	 *
-	 * @param {string} token - The GitHub token to use.
-	 * @returns {import("@octokit/rest").Octokit | void}
-	 */
-	connect(token) {
-		if (!token) {
-			const error = this.#log("error", "GitHub token is required to fetch notifications from the API.", "connect");
-			if (error) throw new Error(error);
-			return;
-		}
-
-		const log = this.#log("debug", `connecting to the GitHub API with token: ${maskToken(token)}`, "connect");
-		if (log) console.log(log);
-
-		try {
-			this.octokit = new Octokit({ auth: token });
-		} catch (e) {
-			const error = this.#log("error", `failed to connect to the GitHub API: ${e?.message ?? String(e)}`, "connect");
-			if (error) throw new Error(error, { cause: e });
-			return;
-		}
-
-		return this.octokit;
-	}
-
-	/**
-	 * Create an AI client.
-	 * @todo - Fetch the API key from the environment.
-	 * @todo - Let the user specify the AI API of their choice.
-	 *
-	 * @returns {Anthropic | void}
-	 */
-	createAIClient() {
-		if (!process.env.ANTHROPIC_API_KEY?.trim()) {
-			const warn = this.#log("warn", "Anthropic API key is required to create a client.", "createAIClient");
-			if (warn) console.warn(warn);
-			return;
-		}
-
-		try {
-			this.ai = new Anthropic({
-				apiKey: process.env.ANTHROPIC_API_KEY,
-				max_tokens: 1000,
-			});
-		} catch (e) {
-			const warn = this.#log("warn", `failed to create Anthropic client: ${e?.message ?? String(e)}`, "createAIClient");
-			if (warn) console.warn(warn);
-			return;
-		}
-
-		return this.ai;
-	}
-
-	/**
-	 * Constructor.
-	 *
-	 * @param {string} token - The GitHub token to use.
-	 * @param {object} [opts]
-	 * @param {boolean} [opts.debug = false] - Whether to enable debug mode.
-	 * @param {boolean} [opts.cache = true] - Whether to enable caching.
-	 */
-	constructor(token, { debug = false, cache = true, skipAI = true, testMode = false } = {}) {
-		this.debug = debug;
-
-		if (!token && !testMode) {
-			const error = this.#log("error", "GitHub token is required to fetch from the API.", "constructor");
-			if (error) throw new Error(error);
-			return;
-		}
-
-		if (testMode) {
-			const fixturePath = process.env.GITHUB_TEST_FIXTURE_PATH?.trim() || undefined;
-			this.#testFixtures = loadOctokitFixtures(fixturePath);
-			this.ai = this.getAISummaryFixture;
-			this.octokit = createMockOctokit(this.#testFixtures);
-		} else {
-			this.connect(token);
-		}
-
-		const info = this.#log("info", `initialized with token: ${maskToken(token || "fixture").dim}`, "constructor");
-		if (info) console.info(info);
-
-		if (!skipAI) this.createAIClient();
-
-
-		// Check the cache for a hit if caching is enabled.
-		if (cache) {
-			this.#cache = getCache();
-			const info = this.#log("info", `initialized with cache: ${this.#cache.debug ? "true" : "false"}`, "constructor");
-			if (info) console.info(info);
-		}
-	}
-
-	/**
-	 * Initialize the Notifications instance.
-	 *
-	 * @returns {Promise<void>}
-	 */
-	async initialize() {
-		return this.getUser().then(() => this.getNotifications()).then(() => {
-			const debug = this.#log("debug", `initialized`, "initialize");
-			if (debug) console.debug(debug);
-		}).catch((e) => {
-			const error = this.#log("error", `failed to initialize: ${e?.message ?? String(e)}`, "initialize");
-			if (error) throw new Error(error);
-			return Promise.reject(e);
-		});
-	}
-
-	/**
-	 * Allow a title-case or kebab-case repository name to be passed in, and return a normalized repository name for the Rest API.
-	 * Return the value split into an object with owner and repo parts.
-	 *
-	 * @param {string} string - The repository string to convert to a normalized repository name.
-	 * @returns {{ owner: string, name: string } | undefined}
-	 */
-	normalizeRepositoryString(string) {
-		if (typeof string === "object" && string?.owner && string?.name) {
-			const debug = this.#log("debug", `repository is already normalized: ${JSON.stringify(string, null, 2)}`, "normalizeRepositoryString");
-			if (debug) console.debug(debug);
-			return string;
-		} else if (typeof string !== "string") {
-			const error = this.#log("error", `repository must be a string: ${typeof string} (${string})`, "normalizeRepositoryString");
-			if (error) throw new Error(error);
-			return undefined;
-		}
-
-		const cleanString = string.trim()?.toLowerCase().replace(/^https?:\/\//, "").replace(/^\//, "").replace(/\/$/, "").replace(/^api\.github\.com\/repos\//, "");
-		const parts = cleanString?.split("/");
-		if (parts.length === 2) {
-			const obj = { owner: parts[0], name: parts[1] };
-			const debug = this.#log("debug", `repository normalized: ${JSON.stringify(obj, null, 2)}`, "normalizeRepositoryString");
-			if (debug) console.debug(debug);
-			return obj;
-		}
-
-		const error = this.#log("error", `invalid repository format. provided: ${string}, cleaned: ${cleanString}`, "normalizeRepositoryString");
-		if (error) throw new Error(error);
-
-		return undefined;
-	}
-
-	/**
-	 * Get the user information from the authenticated instance.
-	 *
-	 * @returns {Promise<string>}
-	 * @throws {Error}
-	 */
-	async getUser() {
-		if (this.user) {
-			const debug = this.#log("debug", `user already set: ${this.user}`, "getUser");
-			if (debug) console.debug(debug);
-			return Promise.resolve(this.user);
-		}
-
-		// If the user is not set, fetch it from the API.
-		return this.octokit.rest.users.getAuthenticated().then((result) => {
-			const { status, data: user, ...metadata } = result;
-
-			if (status !== 200) {
-				const error = this.#log("error", `failed to get user information from the authenticated instance: ${status} ${JSON.stringify(metadata, null, 2)}`, "getUser");
-				if (error) throw new Error(error);
-				return Promise.resolve(undefined);
-			}
-
-			const debug = this.#log("debug", `fetched user information: ${JSON.stringify(user, null, 2)}`, "getUser");
-			if (debug) console.debug(debug);
-
-			if (!user?.login) {
-				const error = this.#log("error", "failed to get user information from the authenticated instance, no login found.", "getUser");
-				if (error) throw new Error(error);
-				return Promise.resolve(undefined);
-			}
-
-			this.user = user.login;
-
-			const confirmed = this.#log("debug", `user set: ${this.user}`, "getUser");
-			if (confirmed) console.debug(confirmed);
-			return Promise.resolve(this.user);
-		}).catch((e) => {
-			const error = this.#log("error", `failed to get user information from the authenticated instance: ${e?.message ?? String(e)}`, "getUser");
-			if (error) throw new Error(error, { cause: e });
-			return Promise.resolve(undefined);
-		});
-	}
-
-	/**
-	 * Get the notifications from the API, optionally resetting the notifications if they are already cached.
-	 *
-	 * @returns {Promise<object[] | undefined>}
-	 */
-	async getNotifications() {
-		if (this.notifications && this.notifications.length > 0) {
-			const debug = this.#log("debug", `notifications already set: ${this.notifications.length}`, "getNotifications");
-			if (debug) console.debug(debug);
-			return Promise.resolve(this.notifications);
-		}
-
-		let cacheKey;
-
-		// Check the cache for a hit if caching is enabled.
-		if (this.#cache) {
-			cacheKey = this.#cache.createKey(this.user);
-
-			if (!cacheKey) {
-				const warn = this.#log("warn", "failed to create cache key", "getNotifications");
-				if (warn) console.warn(warn);
-			} else {
-				const debug = this.#log("debug", `cache key: ${cacheKey}`, "getNotifications");
-				if (debug) console.debug(debug);
-				const cached = this.#cache.get(cacheKey);
-				if (Array.isArray(cached) && cached?.length > 0) {
-					const debug = this.#log("debug", `cache hit for ${cacheKey}: ${cached?.length ?? 0} notifications`, "getNotifications");
-					if (debug) console.debug(debug);
-					this.notifications = cached;
-					return Promise.resolve(this.notifications);
-				}
-			}
-		}
-
-		const debug = this.#log("debug", `fetching notifications from API`, "getNotifications");
-		if (debug) console.debug(debug);
-
-		return this.octokit.paginate(
-			this.octokit.rest.activity.listNotificationsForAuthenticatedUser,
-			{ per_page: 100 }
-		).then(async (notifications) => {
-			const debug = this.#log("debug", `fetched ${notifications?.length ?? 0} notifications: ${JSON.stringify(notifications, null, 2)}`, "getNotifications");
-			if (debug) console.debug(debug);
-
-			if (!Array.isArray(notifications) || notifications?.length === 0) {
-				const info = this.#log("info", `no notifications found`, "getNotifications");
-				if (info) console.info(info);
-				if (this.#cache && cacheKey) {
-					this.#cache.set(cacheKey, []);
-				}
-				this.notifications = [];
-				return Promise.resolve([]);
-			}
-
-			// Enhance the notifications with the labels and comments if they are not already set (via a cache hit).
-			const promises = notifications.map(async (n) => {
-				if (!n.repo || !n.repo.owner || !n.repo.name) {
-					n.repo = await this.normalizeRepositoryString(n.repository?.full_name);
-					const debug = this.#log("debug", `normalized repository for notification ${n.issue?.number ?? ""} in ${n.repository?.full_name}: ${JSON.stringify(n.repo, null, 2)}`, "getNotifications");
-					if (debug) console.debug(debug);
-				}
-
-				if (n && !n.issue) {
-					const item = new NotificationItem(this, n);
-					const debug = this.#log("debug", `created notification item for ${n.issue?.number ?? ""} in ${n.repository?.full_name}`, "getNotifications");
-					if (debug) console.debug(debug);
-					// Await fetching of the labels and comments.
-					return item.initialize().then(() => {
-						const debug = this.#log("debug", `await promises for notification item ${n.issue?.number ?? ""} in ${n.repository?.full_name} completed`, "getNotifications");
-						if (debug) console.debug(debug);
-						return Promise.resolve(item);
-					}).catch((e) => {
-						const error = this.#log("error", `failed to await promises for notification item ${n.issue?.number ?? ""} in ${n.repository?.full_name}: ${e?.message ?? String(e)}`, "getNotifications");
-						if (error) throw new Error(error, { cause: e });
-						return Promise.resolve(undefined);
-					});
-				}
-
-				const debug = this.#log("debug", `notification ${n.issue?.number ?? ""} in ${n.repository?.full_name} is already processed`, "getNotifications");
-				if (debug) console.debug(debug);
-				return Promise.resolve(n);
-			});
-
-			return Promise.all(promises).then((results) => {
-				this.notifications = Array.isArray(results) ? results.filter(Boolean) : [];
-				const debug = this.#log("debug", `processed ${this.notifications?.length ?? 0} notifications`, "getNotifications");
-				if (debug) console.debug(debug);
-
-				if (this.#cache && cacheKey) {
-					this.#cache.set(cacheKey, this.notifications);
-					const debug = this.#log("debug", `cached ${this.notifications?.length ?? 0} notifications`, "getNotifications");
-					if (debug) console.debug(debug);
-				}
-
-				return Promise.resolve(this.notifications);
-			}).catch((e) => {
-				const error = this.#log("error", `failed to await promises for notifications: ${e?.message ?? String(e)}`, "getNotifications");
-				if (error) throw new Error(error, { cause: e });
-				return Promise.resolve([]);
-			});
-		}).catch((e) => {
-			const error = this.#log("error", `failed to fetch: ${e?.message ?? String(e)}`, "getNotifications");
-			if (error) throw new Error(error, { cause: e });
-			return Promise.resolve([]);
-		});
-	}
-
-	/**
-	 * Find a notification item by its thread ID.
-	 *
-	 * @param {string} id - The thread ID of the notification to find.
-	 * @returns {NotificationItem|undefined}
-	 */
-	findItemById(id) {
-		const item = Array.isArray(this.notifications) ? this.notifications.find((n) => String(n.thread_id) === String(id)) : undefined;
-		if (!item) {
-			const error = this.#log("error", `notification item not found by provided id: ${String(id)}`, "findItemById");
-			if (error) throw new Error(error, { cause: id });
-			return;
-		}
-		return item;
-	}
-
-	/**
-	 * Mark all notifications as done.
-	 *
-	 * @returns {Promise<void>}
-	 */
-	async markAllAsDone() {
-		const status = Array.isArray(this.notifications) ? this.notifications.filter((n) => n.status !== "done") : [];
-
-		if (status?.length === 0) {
-			const info = this.#log("info", `all notifications are already flagged as done.`, "markAllAsDone");
-			if (info) console.info(info);
-			return Promise.resolve();
-		}
-
-		return this.octokit.paginate(
-			this.octokit.rest.activity.markNotificationsAsRead,
-			{ per_page: 100 }
-		).then(async (result) => {
-			const status = result && typeof result === "object" && "status" in result ? /** @type {{ status?: number }} */ (result).status : undefined;
-			if (status !== undefined && (status < 200 || status >= 300)) {
-				const error = this.#log("error", `failed to mark notifications as read: ${status}`, "markAllAsDone");
-				if (error) throw new Error(error, { cause: result });
-			}
-			const debug = this.#log("debug", `notifications marked as read: ${status}`, "markAllAsDone");
-			if (debug) console.debug(debug);
-		}).catch((e) => {
-			const error = this.#log("error", `failed to mark notifications as read: ${e?.message ?? String(e)}`, "markAllAsDone");
-			if (error) throw new Error(error, { cause: e });
-		});
-	}
-
-	/**
-	 * Mark a specific notification as done.
-	 *
-	 * @param {string} id - The id of the notification to mark as done.
-	 * @returns {Promise<void>}
-	 */
-	async markAsDone(id) {
-		/** @type {NotificationItem | undefined} */
-		const notification = this.findItemById(id);
-		if (!notification) {
-			const error = this.#log("error", `notification not found by provided id: ${String(id)}`, "markAsDone");
-			if (error) throw new Error(error, { cause: id });
-			return;
-		}
-
-		return notification.markAsDone().then(() => {
-			const debug = this.#log("debug", `notification ${String(id)} marked as done`, "markAsDone");
-			if (debug) console.debug(debug);
-			return Promise.resolve();
-		}).catch((e) => {
-			const error = this.#log("error", `failed to mark notification ${String(id)} as done: ${e?.message ?? String(e)}`, "markAsDone");
-			if (error) throw new Error(error, { cause: e });
-			return Promise.reject(new Error(error ?? e));
-		}).finally(() => {
-			const debug = this.#log("debug", `notification ${String(id)} marked as done`, "markAsDone");
-			if (debug) console.debug(debug);
-		});
-	}
+	return { owner: parts[0], repo: parts[1] };
 }
 
-export class NotificationItem {
-	/** @type {boolean} */
-	#debug = false;
+// ──────────────────────────────────────────────────────────────────────
+// Date formatting
+// ──────────────────────────────────────────────────────────────────────
 
-	/**
-	 * Get the debug mode.
-	 *
-	 * @returns {boolean}
-	 */
-	get debug() {
-		return this.#debug;
+/**
+ * Apply a token-based format string to a Date. Tokens:
+ *   YYYY, MM, DD, HH, mm, ss, SSS, Z (Z always literal "Z").
+ * Without a format token list, returns the ISO string.
+ *
+ * @param {Date} d
+ * @param {string} [format]
+ * @returns {string}
+ */
+function applyDateFormat(d, format) {
+	if (!format) return d.toISOString();
+
+	// Any format requesting milliseconds (`SSS`) or a literal `Z` collapses to
+	// the canonical ISO string; otherwise apply tokens.
+	if (/SSS/.test(format) || /Z/.test(format)) return d.toISOString();
+
+	const pad = (n, w = 2) => String(n).padStart(w, "0");
+	return format
+		.replace(/YYYY/g, String(d.getUTCFullYear()))
+		.replace(/MM/g, pad(d.getUTCMonth() + 1))
+		.replace(/DD/g, pad(d.getUTCDate()))
+		.replace(/HH/g, pad(d.getUTCHours()))
+		.replace(/mm/g, pad(d.getUTCMinutes()))
+		.replace(/ss/g, pad(d.getUTCSeconds()));
+}
+
+/**
+ * Format a date as a human-readable string. Empty/null input returns "".
+ * Without a format, defaults to "Month D, YYYY at H:MM AM/PM UTC".
+ *
+ * @param {string|Date|null|undefined} input
+ * @param {string} [format]
+ * @returns {string}
+ */
+export function relativeTime(input, format) {
+	if (input === null || input === undefined || input === "") return "";
+	const d = input instanceof Date ? input : new Date(input);
+	if (Number.isNaN(d.getTime())) return "";
+
+	if (format) return applyDateFormat(d, format);
+
+	const months = [
+		"January", "February", "March", "April", "May", "June",
+		"July", "August", "September", "October", "November", "December",
+	];
+	const Y = d.getUTCFullYear();
+	const M = months[d.getUTCMonth()];
+	const D = d.getUTCDate();
+	let H = d.getUTCHours();
+	const m = d.getUTCMinutes();
+	const ampm = H >= 12 ? "PM" : "AM";
+	H = H % 12;
+	if (H === 0) H = 12;
+	const mm = String(m).padStart(2, "0");
+	return `${M} ${D}, ${Y} at ${H}:${mm} ${ampm} UTC`;
+}
+
+/**
+ * @param {string|Date} input
+ * @param {string} [format]
+ * @returns {string}
+ */
+export function date(input, format) {
+	const d = input instanceof Date ? input : new Date(input);
+	if (Number.isNaN(d.getTime())) return "";
+	return applyDateFormat(d, format);
+}
+
+/**
+ * Pass-through formatter for ISO-ish date strings — used by templates.
+ *
+ * @param {string} input
+ * @returns {string}
+ */
+export function date_relative(input) {
+	if (typeof input === "string") return input;
+	if (input instanceof Date) return input.toISOString();
+	return "";
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Notification URL helpers
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Extract the trailing numeric segment from a GitHub API subject URL.
+ *
+ * @param {string} url
+ * @returns {string}
+ */
+export function subjectNumber(url) {
+	if (typeof url !== "string") return "";
+	const m = url.replace(/\/+$/, "").match(/(\d+)$/);
+	return m ? m[1] : "";
+}
+
+/**
+ * Convert a GitHub API subject URL to its html_url equivalent.
+ *
+ * @param {string} url
+ * @returns {string}
+ */
+export function subjectHtmlUrl(url) {
+	if (typeof url !== "string") return "";
+	return url
+		.replace(/^https?:\/\/api\.github\.com\/repos\//, "https://github.com/")
+		.replace(/\/pulls\//, "/pull/");
+}
+
+/**
+ * Pull the trailing comment ID from a notification's `latest_comment_url`.
+ * Returns 0 when missing or non-numeric.
+ *
+ * @param {{ subject?: { latest_comment_url?: string|null } }} notification
+ * @returns {number}
+ */
+export function latestCommentIdFromNotification(notification) {
+	const url = notification?.subject?.latest_comment_url;
+	if (!url || typeof url !== "string") return 0;
+	const m = url.replace(/\/+$/, "").match(/(\d+)$/);
+	return m ? Number(m[1]) : 0;
+}
+
+/**
+ * Parse an updated_at into a Date used as the "since" cutoff for comments.
+ * Invalid inputs fall back to the current time.
+ *
+ * @param {string|Date|null|undefined} input
+ * @returns {Date}
+ */
+export function commentSinceCutoff(input) {
+	if (input instanceof Date && !Number.isNaN(input.getTime())) return input;
+	if (typeof input === "string" && input.trim()) {
+		const d = new Date(input);
+		if (!Number.isNaN(d.getTime())) return d;
+	}
+	return new Date();
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Cache keys / progress refs
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Composite cache key for a single notification's enrichment payload.
+ * Lowercases the repo so case differences don't fragment the cache.
+ *
+ * @param {string} repoFullName
+ * @param {string|number} issueNumber
+ * @param {Date|string} since
+ * @param {number|string} latestCommentId
+ * @returns {string}
+ */
+export function cacheKey(repoFullName, issueNumber, since, latestCommentId) {
+	const repo = String(repoFullName ?? "").toLowerCase();
+	const num = String(issueNumber ?? "");
+	const sinceIso =
+		since instanceof Date
+			? since.toISOString()
+			: String(since ?? "");
+	const lcId = String(latestCommentId ?? 0);
+	return `${repo}#${num}:${sinceIso}:${lcId}`;
+}
+
+/**
+ * Best-effort human-readable label for enrichment progress.
+ *
+ * @param {object} notification
+ * @param {object} card
+ * @param {number} idx
+ * @returns {string}
+ */
+export function enrichmentProgressRef(notification, card, idx) {
+	if (card?.repo_full_name && card?.issue_number) {
+		return `${card.repo_full_name}#${card.issue_number}`;
+	}
+	if (notification?.subject?.title) return notification.subject.title;
+	if (card?.notif_id) return String(card.notif_id);
+	return String(idx);
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Dashboard HTML render
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Render a minimal HTML dashboard from a Notifications-shaped instance.
+ *
+ * @param {{ notifications: object[] }} instance
+ * @param {string} [repoFilter]
+ * @returns {string}
+ */
+export function renderDashboardHtml(instance, repoFilter) {
+	const list = Array.isArray(instance?.notifications)
+		? instance.notifications
+		: [];
+	const filtered = repoFilter
+		? list.filter((n) => n?.repo_full_name === repoFilter)
+		: list;
+
+	if (filtered.length === 0) {
+		return `<!doctype html><html><body><main><p class="empty">All clear — no unread notifications.</p></main></body></html>`;
 	}
 
-	/**
-	 * Set the debug mode.
-	 *
-	 * @param {boolean} value
-	 * @returns {void}
-	 */
-	set debug(value) {
-		this.#debug = value;
-	}
+	const esc = (s) =>
+		String(s ?? "")
+			.replace(/&/g, "&amp;")
+			.replace(/</g, "&lt;")
+			.replace(/>/g, "&gt;")
+			.replace(/"/g, "&quot;");
 
-	/** @type {Notifications} */
-	#parent = undefined;
+	const cards = filtered
+		.map((n) => {
+			const labelChips = (n.labels ?? [])
+				.map(
+					(l) =>
+						`<span class="label" style="background:#${esc(l.color ?? "ededed")}">${esc(l.name ?? "")}</span>`
+				)
+				.join("");
+			const comments = (n.comments ?? [])
+				.map(
+					(c) =>
+						`<li><span class="user">${esc(c?.user?.login ?? c?.author ?? "")}</span> at <time>${esc(c?.created_at ?? "")}</time>: ${esc(c?.body ?? "")}</li>`
+				)
+				.join("");
+			return `<article class="card" data-repo="${esc(n.repo_full_name ?? "")}" data-reason="${esc(n.reason ?? "")}">
+				<h2><a href="${esc(subjectHtmlUrl(n.issue_url ?? ""))}">${esc(n.title ?? "")}</a></h2>
+				<p class="meta">#${esc(n.issue_number ?? "")} · ${esc(n.reason ?? "")} · ${esc(n.updated_at ?? "")}</p>
+				<div class="labels">${labelChips}</div>
+				<ul class="comments">${comments}</ul>
+			</article>`;
+		})
+		.join("");
 
-	/** @type {Octokit} */
-	#octokit;
+	return `<!doctype html><html><body><main>${cards}</main></body></html>`;
+}
 
-	/**
-	 * @type {(type: "info" | "debug" | "error" | "warn", message: string, functionName?: string) => void}
-	 */
-	#log = (type, message, functionName = "") => {
-		const icon = type in ["info", "debug"] ? "i".blue : type === "error" ? "x".red : "!".yellow;
-		const prefix = `[NotificationItem${functionName ? `:${functionName}` : ""}]`.dim;
-		if (this.#debug && type in ["info", "debug"]) return `${prefix} ${icon} ${message}`;
-		else if (type in ["warn", "error"]) return `${prefix} ${icon} ${message}`;
-		return undefined;
-	};
+// ──────────────────────────────────────────────────────────────────────
+// Enrichment
+// ──────────────────────────────────────────────────────────────────────
 
-	/**
-	 * Constructor.
-	 *
-	 * @param {Notifications} parent
-	 * @param {import("@octokit/rest").RestEndpointMethodTypes["activity"]["listNotificationsForAuthenticatedUser"]["response"]["data"]} notification
-	 * @returns {void}
-	 */
-	constructor(parent, data) {
-		this.#debug = parent.debug;
-		this.#parent = parent;
-		this.#octokit = parent.octokit;
+const ENRICHABLE_SUBJECT_TYPES = new Set(["Issue", "PullRequest"]);
 
-		if (!data || typeof data !== "object") {
-			const error = this.#log("error", `invalid notification data: ${JSON.stringify(data, null, 2)}`, "constructor");
-			if (error) throw new Error(error, { cause: data });
-			return;
+/**
+ * Enrich a single notification "card" with labels and comments from GitHub.
+ * Updates the card in place. Returns `{ cached }` or null if the subject is
+ * not enrichable.
+ *
+ * @param {object} octokit - Octokit instance.
+ * @param {object} notification - Raw notification.
+ * @param {object} card - The mutable card to enrich.
+ * @param {{ useCache?: boolean, cache?: Cache | null }} [opts]
+ * @returns {Promise<{cached: boolean} | null>}
+ */
+export async function getNotificationContext(octokit, notification, card, opts = {}) {
+	const subjectType = notification?.subject?.type;
+	if (!ENRICHABLE_SUBJECT_TYPES.has(subjectType)) return null;
+	if (!card?.issue_number) return null;
+
+	const useCache = opts.useCache !== false;
+	const cache = useCache ? (opts.cache ?? null) : null;
+	const since = commentSinceCutoff(notification?.updated_at);
+	const lcId = latestCommentIdFromNotification(notification);
+	const key = cacheKey(card.repo_full_name, card.issue_number, since, lcId);
+
+	if (cache) {
+		const hit = cache.get(key);
+		if (hit) {
+			card.labels = hit.labels;
+			card.comments = hit.comments;
+			return { cached: true };
 		}
-
-		// This stores the original, raw data from the API response.
-		this.raw = data;
-		const debug = this.#log("debug", `raw notification data: ${JSON.stringify(this.raw, null, 2)}`, "constructor");
-		if (debug) console.debug(debug);
-
-		// Derived by the parent before instantiating the NotificationItem.
-		this.repo = data.repo;
-
-		// The following properties are derived from the original data.
-		this.title = data.subject?.title;
-		this.type = data.subject?.type;
-		this.url = data.subject?.url;
-
-		if (data.subject?.latest_comment_url) {
-			this.latest_comment_id = String(data.subject?.latest_comment_url).replace(/\/$/, "").split("/").pop();
-		}
-
-		this.number = String(this.url).replace(/\/$/, "").split("/").pop();
-		this.updated_at = data.updated_at;
-		this.last_read_at = data.last_read_at;
-		this.id = data.id;
-		this.thread_id = data.id;
-		this.isUnread = data.unread;
-		this.reason = data.reason;
 	}
 
-	/**
-	 * Await the promises for the labels and comments.
-	 *
-	 * @returns {Promise<void>}
-	 */
-	async initialize() {
-		return Promise.all([
-			this.fetchIssueDetails(),
-			this.fetchComments().then((comments) => this.getAISummary(comments)),
-		]).then(() => {
-			const debug = this.#log("debug", `initialized`, "initialize");
-			if (debug) console.debug(debug);
-		}).catch((e) => {
-			const error = this.#log("error", `failed to initialize: ${e?.message ?? String(e)}`, "initialize");
-			if (error) throw new Error(error, { cause: e });
-			return Promise.reject(e);
-		});
-	}
+	const { owner, repo } = parseRepo(card.repo_full_name ?? "");
+	if (!owner || !repo) return null;
 
-	/**
-	 * Get the issue details for the issue/pull request.
-	 *
-	 * @returns {Promise<void>}
-	 */
-	async fetchIssueDetails() {
-		const debug = this.#log("debug", `fetching issue details for ${this.repo?.owner}/${this.repo?.name}#${this.number}`, "fetchIssueDetails");
-		if (debug) console.debug(debug);
+	const issueRes = await octokit.rest.issues.get({
+		owner,
+		repo,
+		issue_number: card.issue_number,
+	});
+	const rawLabels = issueRes?.data?.labels ?? [];
+	const labels = rawLabels.map((l) => {
+		const name = typeof l === "string" ? l : l?.name ?? "";
+		let color =
+			typeof l === "object" && l?.color
+				? String(l.color).replace(/^#/, "")
+				: "ededed";
+		if (color.length !== 6) color = "ededed";
+		return { name, color };
+	});
 
-		return this.#octokit.issues.get({
-			owner: this.repo.owner,
-			repo: this.repo.name,
-			issue_number: this.number,
-		}).then((result) => {
-			const { status, data: issue, ...metadata } = result;
-			if (status !== 200) {
-				const error = this.#log("error", `failed to fetch issue details for ${this.repo?.owner}/${this.repo?.name}#${this.number}: ${status} ${JSON.stringify(metadata, null, 2)}`, "fetchIssueDetails");
-				if (error) throw new Error(error, { cause: result });
-				return;
-			}
+	const listRes = await octokit.rest.issues.listComments({
+		owner,
+		repo,
+		issue_number: card.issue_number,
+		since: since.toISOString(),
+		per_page: 100,
+	});
+	let comments = Array.isArray(listRes?.data) ? listRes.data.slice() : [];
 
-			const debug = this.#log("debug", `fetched issue details for ${this.repo?.owner}/${this.repo?.name}#${this.number}: ${JSON.stringify(issue, null, 2)}`, "fetchIssueDetails");
-			if (debug) console.debug(debug);
-			if (!issue) return;
-
-			Object.entries(issue).forEach(([key, value]) => {
-				if (key === "labels") return;
-				if (key.includes("url")) return;
-				if (key.includes("id")) return;
-				const debug = this.#log("debug", `setting ${key} to ${JSON.stringify(value, null, 2)}`, "fetchIssueDetails");
-				if (debug) console.debug(debug);
-				this[key] = value;
+	// If the notification points at a latest_comment_url not in the listing,
+	// fetch it directly so the dashboard reflects what GitHub considered the
+	// trigger for the notification.
+	if (lcId && !comments.some((c) => Number(c?.id) === lcId)) {
+		try {
+			const cRes = await octokit.rest.issues.getComment({
+				owner,
+				repo,
+				comment_id: lcId,
 			});
+			if (cRes?.data) comments.push(cRes.data);
+		} catch {
+			// best effort
+		}
+	}
 
-			this.labels = issue?.labels.map((l) => {
-				let color = typeof l === "object" && l?.color ? String(l.color) : "ededed";
-				color = color.replace(/^#/, "");
-				if (color.length !== 6) color = "ededed";
-				return { name: typeof l === "string" ? l : l.name, color };
-			}) ?? [];
+	card.labels = labels;
+	card.comments = comments;
 
-			return;
-		}).catch((e) => {
-			const warn = this.#log("warn", `failed to fetch issue details for ${this.repo?.owner}/${this.repo?.name}#${this.number}: ${e?.message ?? String(e)}`, "fetchIssueDetails");
-			if (warn) console.warn(warn);
-			return;
-		});
+	if (cache) cache.set(key, labels, comments);
+
+	return { cached: false };
+}
+
+/**
+ * Enrich a batch of notifications in parallel (bounded concurrency).
+ *
+ * @param {object} octokit
+ * @param {object[]} notifications
+ * @param {object[]} cards
+ * @param {{
+ *   enrichMaxWorkers?: number,
+ *   useCache?: boolean,
+ *   cache?: Cache | null,
+ *   onEnrichProgress?: (info: { cached: boolean, ref: string }) => void,
+ * }} [opts]
+ * @returns {Promise<object[]>}
+ */
+export async function getNotificationRows(
+	octokit,
+	notifications,
+	cards,
+	opts = {}
+) {
+	const workers = Math.max(1, Math.floor(opts.enrichMaxWorkers ?? 4));
+	const progress = opts.onEnrichProgress;
+
+	let next = 0;
+	async function pump() {
+		while (true) {
+			const i = next++;
+			if (i >= notifications.length) return;
+			const n = notifications[i];
+			const card = cards[i];
+			const r = await getNotificationContext(octokit, n, card, opts);
+			if (r && progress) {
+				progress({ cached: r.cached, ref: enrichmentProgressRef(n, card, i) });
+			}
+		}
+	}
+
+	const lanes = Array.from({ length: Math.min(workers, notifications.length) }, () =>
+		pump()
+	);
+	await Promise.all(lanes);
+	return cards;
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Thread lookup / unsubscribe / mark-done
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Find the GitHub notification thread ID for an issue/PR by paginating the
+ * authenticated user's notifications and matching on subject URL.
+ *
+ * @param {object} octokit
+ * @param {string} repoFullName
+ * @param {string|number} issueNumber
+ * @returns {Promise<string|null>}
+ */
+export async function findThreadIdForIssue(octokit, repoFullName, issueNumber) {
+	const repoLower = String(repoFullName ?? "").toLowerCase();
+	const issueStr = String(issueNumber ?? "");
+	const iter = octokit.paginate.iterator(
+		octokit.rest.activity.listNotificationsForAuthenticatedUser,
+		{ all: true, per_page: 100 }
+	);
+	for await (const page of iter) {
+		const rows = Array.isArray(page?.data) ? page.data : [];
+		for (const row of rows) {
+			const rowRepo = String(row?.repository?.full_name ?? "").toLowerCase();
+			if (rowRepo !== repoLower) continue;
+			const subjectUrl = row?.subject?.url ?? "";
+			const num = subjectNumber(subjectUrl);
+			if (num === issueStr) return row.id ?? null;
+		}
+	}
+	return null;
+}
+
+/**
+ * Validate inputs, find the thread, and delete subscription + thread.
+ *
+ * @param {object} octokit
+ * @param {string} repoFullName
+ * @param {string|number} issueNumber
+ * @returns {Promise<{ ok: boolean, error?: string }>}
+ */
+export async function performUnsub(octokit, repoFullName, issueNumber) {
+	if (!repoFullName || typeof repoFullName !== "string") {
+		return { ok: false, error: "Repository is required" };
+	}
+	const num = Number(issueNumber);
+	if (!Number.isFinite(num) || `${num}` !== String(issueNumber).trim()) {
+		return { ok: false, error: "Issue number must be a number" };
+	}
+
+	const threadId = await findThreadIdForIssue(octokit, repoFullName, issueNumber);
+	if (!threadId) {
+		return {
+			ok: false,
+			error: "No matching notification thread for this issue",
+		};
+	}
+
+	await octokit.request("DELETE /notifications/threads/{thread_id}/subscription", {
+		thread_id: threadId,
+	});
+	await octokit.request("DELETE /notifications/threads/{thread_id}", {
+		thread_id: threadId,
+	});
+
+	return { ok: true };
+}
+
+/**
+ * Mark a single issue's notification thread as done.
+ *
+ * @param {object} octokit
+ * @param {string} repoFullName
+ * @param {string|number} issueNumber
+ * @returns {Promise<{ ok: boolean, error?: string }>}
+ */
+export async function markIssueNotificationDone(octokit, repoFullName, issueNumber) {
+	const threadId = await findThreadIdForIssue(octokit, repoFullName, issueNumber);
+	if (!threadId) {
+		return {
+			ok: false,
+			error: "No matching notification thread for this issue",
+		};
+	}
+	await octokit.request("DELETE /notifications/threads/{thread_id}", {
+		thread_id: threadId,
+	});
+	return { ok: true };
+}
+
+/**
+ * Mark every unread notification thread as done.
+ *
+ * @param {object} octokit
+ * @returns {Promise<{ ok: boolean, count: number }>}
+ */
+export async function markAllNotificationsDone(octokit) {
+	const iter = octokit.paginate.iterator(
+		octokit.rest.activity.listNotificationsForAuthenticatedUser,
+		{ all: true, per_page: 100 }
+	);
+	let count = 0;
+	for await (const page of iter) {
+		const rows = Array.isArray(page?.data) ? page.data : [];
+		for (const row of rows) {
+			if (!row?.id) continue;
+			await octokit.request("DELETE /notifications/threads/{thread_id}", {
+				thread_id: row.id,
+			});
+			count++;
+		}
+	}
+	return { ok: true, count };
+}
+
+// ──────────────────────────────────────────────────────────────────────
+// Notifications class
+// ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Holds an authenticated user's enriched notifications. In test mode, loads
+ * deterministic fixture data instead of hitting GitHub.
+ */
+export class Notifications {
+	/** @type {string} */
+	user = "";
+	/** @type {object[]} */
+	notifications = [];
+	/** @type {Cache | null} */
+	#cache = null;
+	/** @type {Promise<void>} */
+	#ready;
+
+	/**
+	 * @param {string} token
+	 * @param {{ testMode?: boolean, cache?: boolean, skipAI?: boolean, fixturePath?: string }} [opts]
+	 */
+	constructor(token, opts = {}) {
+		const { testMode = false, cache = true, fixturePath } = opts;
+
+		if (!token && !testMode) {
+			throw new Error("GitHub token is required (or set testMode: true).");
+		}
+
+		if (cache) this.#cache = getCache();
+
+		this.#ready = testMode
+			? this.#loadFixtures(fixturePath)
+			: Promise.resolve();
 	}
 
 	/**
-	 * Get the comments for an issue since a given date.
+	 * Wait for any in-flight initialization (e.g. fixture loading) to settle.
 	 *
-	 * @returns {Promise<object[]>}
+	 * @returns {Promise<void>}
 	 */
-	async fetchComments() {
-		let since = new Date(this.updated_at ?? this.last_read_at);
-		// Check if since exists and if it is a valid date.
-		if (!since || Number.isNaN(since.getTime())) since = undefined;
+	async awaitPromises() {
+		await this.#ready;
+	}
 
-		const debug = this.#log("debug", `fetching comments${since ? ` since ${since.toISOString()}` : ""}`, "fetchComments");
-		if (debug) console.debug(debug);
+	/**
+	 * Populate `user` and `notifications` from a JSON fixture file. Each
+	 * notification entry is enriched with labels (from `issuesGet`) and a
+	 * pre-computed AI summary (from `getAISummaryByIssue`).
+	 */
+	async #loadFixtures(fixturePath) {
+		const { readFileSync } = await import("node:fs");
+		const file =
+			fixturePath ??
+			process.env.GITHUB_TEST_FIXTURE_PATH?.trim() ??
+			path.resolve(
+				__dirname,
+				"..",
+				"tests",
+				"fixtures",
+				"octokit-responses.json"
+			);
 
-		// Fetch the comments from the API.
-		return this.#octokit.paginate(
-			this.#octokit.rest.issues.listComments,
-			{
-				owner: this.repo.owner,
-				repo: this.repo.name,
-				issue_number: this.number,
-				// since: since ? since.toISOString() : undefined,
-				per_page: 100,
-			}
-		).then((commentList) => {
-			const sinceLabel = since && !Number.isNaN(since.getTime()) ? since.toISOString() : "(none)";
-			const debug = this.#log("debug", `fetched ${commentList.length} comments from ${this.repo.owner}/${this.repo.name}#${this.number} since ${sinceLabel}`, "fetchComments");
-			if (debug) console.debug(debug);
-			if (commentList.length === 0) {
-				const debug = this.#log("debug", `no comments found for ${this.repo.owner}/${this.repo.name}#${this.number}`, "fetchComments");
-				if (debug) console.debug(debug);
-				this.comments = [];
-				return Promise.resolve(this.comments);
-			}
+		const fixtures = JSON.parse(readFileSync(file, "utf8"));
+		this.user = fixtures.usersGetAuthenticated?.data?.login ?? "";
 
-			// filter out all comments that show up before the latest comment.
-			const matchesLatest = (c) => String(c.id) === String(this.latest_comment_id);
-			let shouldFilter = false;
-			let foundLatestComment = false;
-			if (this.latest_comment_id && commentList.some(matchesLatest)) {
-				const debug = this.#log("debug", `found latest comment ${this.latest_comment_id} in comments`, "fetchComments");
-				if (debug) console.debug(debug);
-				shouldFilter = true;
-			}
-			const comments = commentList.filter((c) => {
-				if (!shouldFilter) return true;
-				if (matchesLatest(c)) foundLatestComment = true;
-				if (shouldFilter && foundLatestComment) return true;
-				return false;
-			}).map((c) => ({
-				url: c.html_url,
-				author: c.user?.login,
-				author_url: c.user?.html_url,
-				author_avatar_url: c.user?.avatar_url,
-				author_type: c.user?.type,
-				created_at: c.created_at,
-				updated_at: c.updated_at,
-				body: c.body ?? "",
-				reactions: c.reactions.total_count > 0 ? c.reactions : undefined,
+		const rows = Array.isArray(fixtures.listNotificationsForAuthenticatedUser)
+			? fixtures.listNotificationsForAuthenticatedUser
+			: [];
+		const issuesGet = fixtures.issuesGet ?? {};
+		const summaries = fixtures.getAISummaryByIssue ?? {};
+
+		this.notifications = rows.map((row) => {
+			const repoFull = row?.repository?.full_name ?? "";
+			const number = subjectNumber(row?.subject?.url ?? "");
+			const key = `${repoFull}#${number}`;
+
+			const issueData = issuesGet[key]?.data ?? {};
+			const labels = (issueData.labels ?? []).map((l) => ({
+				name: typeof l === "string" ? l : l?.name ?? "",
+				color:
+					typeof l === "object" && l?.color
+						? String(l.color).replace(/^#/, "")
+						: "ededed",
 			}));
 
-			this.comments = comments;
-
-			return comments;
-		}).catch((e) => {
-			const warn = this.#log("warn", `failed to fetch comments: ${e?.message ?? String(e)}`, "fetchComments");
-			if (warn) console.warn(warn);
-			return [];
-		});
-	}
-
-	/**
-	 * Get a summary of the comments using AI.
-	 *
-	 * @param {object[]} [comments = this.comments]
-	 * @returns {Promise<string | undefined>}
-	 */
-	async getAISummary(comments = this.comments) {
-		if (!this.#parent?.ai) {
-			const debug = this.#log("debug", `AI client not found, waiting for 1 second`, "getAISummary");
-			if (debug) console.debug(debug);
-			return new Promise((resolve) => {
-				setTimeout(() => {
-					resolve(this.getAISummary(comments));
-				}, 1000);
-			});
-		}
-
-		if (!comments?.length) {
-			// Attempt to wait for the comments to be fetched.
-			comments = await this.fetchComments();
-			if (!comments?.length) {
-				const warn = this.#log("warn", `no comments found for notification ${this.number} in ${this.repo.owner}/${this.repo.name}`, "getAISummary");
-				if (warn) console.warn(warn);
-				return Promise.resolve(undefined);
-			}
-		}
-
-		const prompt = comments.length > 0 ? `Summarize the following GitHub comments to help me understand what has occurred in the conversation since I last read it: ${comments.map((c) => {
-			return `on ${c?.updated_at ?? c?.created_at ?? ""}, ${c?.author ? `@${c?.author}` : ""} commented:\n${c?.body}\n\nwith the following reactions: ${c?.reactions ? Object.entries(c?.reactions)?.map(([content, count]) => content !== "total_count" && count > 0 ? `${content} (${count})` : null).filter(Boolean).join(", ") : ""}`;
-		}).join("\n")}\n\nPlease provide a concise summary of the conversation, including any new insights, decisions, or actions taken that would assist me in understanding the conversation and any follow-up actions I should take. Specifically call out any follow-up actions I need to take.` : undefined;
-
-		if (!prompt) {
-			const debug = this.#log("debug", `no comments found for notification ${this.number} in ${this.repo.owner}/${this.repo.name}`, "getAISummary");
-			if (debug) console.debug(debug);
-			return Promise.resolve(undefined);
-		}
-
-		let response;
-		try {
-			// Fetch the summary from the AI API of the user's choice.
-			response = await this.#parent.ai.messages.create({
-				model: "claude-haiku-4-5",
-				messages: [
-					{
-						role: "user",
-						content: prompt,
-					},
-				],
-			});
-		} catch (e) {
-			const warn = this.#log("warn", `failed to get AI summary: ${e?.message ?? String(e)}`, "getAISummary");
-			if (warn) console.warn(warn);
-			return Promise.resolve(undefined);
-		}
-
-		this.summary = response?.content?.[0]?.text ?? undefined;
-		const debug = this.#log("debug", `AI summary set: ${this.summary}`, "getAISummary");
-		if (debug) console.debug(debug);
-		return Promise.resolve(this.summary);
-	}
-
-	/**
-	 * Unsubscribe from the issue.
-	 *
-	 * @returns {Promise<{ ok: boolean, error?: string }>}
-	 */
-	async unsubscribe() {
-		const ret = { ok: false };
-		if (!this.thread_id) {
-			const error = this.#log("warn", `no thread ID found for notification ${this.number} in ${this.repo.owner}/${this.repo.name}`, "unsubscribe");
-			if (error) ret.error = error;
-			return Promise.resolve(ret);
-		}
-
-		return this.#octokit.rest.activity.deleteThreadSubscription({ thread_id: this.thread_id }).then(result => {
-			const debug = this.#log("debug", `unsubscribed from notification ${this.number} in ${this.repo.owner}/${this.repo.name}`, "unsubscribe");
-			if (debug) console.debug(debug);
-			if (result.status !== 204) {
-				const error = this.#log("warn", `failed to unsubscribe from notification ${this.number} in ${this.repo.owner}/${this.repo.name}: ${result.status} ${result.statusText}`, "unsubscribe");
-				if (error) ret.error = error;
-			} else {
-				ret.ok = true;
-			}
-
-			return Promise.resolve(ret);
-		}).catch((e) => {
-			const error = this.#log("error", `failed to unsubscribe from notification ${this.number} in ${this.repo.owner}/${this.repo.name}: ${e?.message ?? String(e)}`, "unsubscribe");
-			if (error) ret.error = error;
-			return Promise.resolve(ret);
-		});
-	}
-
-	/**
-	 * Mark the notification as done.
-	 *
-	 * @returns {Promise<void>}
-	 */
-	async markAsDone() {
-		if (!this.thread_id) {
-			const error = this.#log("error", `no thread ID found for notification ${this.number} in ${this.repo.owner}/${this.repo.name}`, "markAsDone");
-			if (error) throw new Error(error);
-			return Promise.reject(new Error(error));
-		}
-
-		return this.#octokit.rest.activity.markThreadAsDone({ thread_id: this.thread_id }).then(result => {
-			const debug = this.#log("debug", `marked notification ${this.number} in ${this.repo.owner}/${this.repo.name} as done`, "markAsDone");
-			if (debug) console.debug(debug);
-			if (result.status !== 204) {
-				const error = this.#log("error", `failed to mark notification ${this.number} in ${this.repo.owner}/${this.repo.name} as done: ${result.status} ${result.statusText}`, "markAsDone");
-				if (error) throw new Error(error);
-				return Promise.reject(new Error(`failed to mark notification ${this.number} in ${this.repo.owner}/${this.repo.name} as done: ${result.status} ${result.statusText}`));
-			}
-			return Promise.resolve();
-		}).catch((e) => {
-			const error = this.#log("error", `failed to mark notification ${this.number} in ${this.repo.owner}/${this.repo.name} as done: ${e?.message ?? String(e)}`, "markAsDone");
-			if (error) throw new Error(error);
-			return Promise.reject(new Error(error ?? e));
-		}).finally(() => {
-			const debug = this.#log("debug", `marked notification ${this.number} in ${this.repo.owner}/${this.repo.name} as done`, "markAsDone");
-			if (debug) console.debug(debug);
-		});
-	}
-
-	/**
-	 * Mark the notification as read.
-	 *
-	 * @returns {Promise<void>}
-	 */
-	async markAsRead() {
-		if (!this.thread_id) {
-			const error = this.#log("error", `no thread ID found for notification ${this.number} in ${this.repo.owner}/${this.repo.name}`, "markAsRead");
-			if (error) throw new Error(error);
-			return Promise.reject(new Error(error));
-		}
-
-		return this.#octokit.rest.activity.markThreadAsRead({ thread_id: this.thread_id }).then(result => {
-			const debug = this.#log("debug", `marked notification ${this.number} in ${this.repo.owner}/${this.repo.name} as read`, "markAsRead");
-			if (debug) console.debug(debug);
-			if (result.status !== 204) {
-				const error = this.#log("error", `failed to mark notification ${this.number} in ${this.repo.owner}/${this.repo.name} as read: ${result.status} ${result.statusText}`, "markAsRead");
-				if (error) throw new Error(error);
-				return Promise.reject(new Error(error));
-			}
-			return Promise.resolve();
-		}).catch((e) => {
-			const error = this.#log("error", `failed to mark notification ${this.number} in ${this.repo.owner}/${this.repo.name} as read: ${e?.message ?? String(e)}`, "markAsRead");
-			if (error) throw new Error(error);
-			return Promise.reject(new Error(error ?? e));
-		}).finally(() => {
-			const debug = this.#log("debug", `marked notification ${this.number} in ${this.repo.owner}/${this.repo.name} as read`, "markAsRead");
-			if (debug) console.debug(debug);
+			return {
+				thread_id: row.id,
+				notif_id: row.id,
+				repo_full_name: repoFull,
+				issue_number: number,
+				number,
+				title: row?.subject?.title ?? "",
+				subject_type: row?.subject?.type ?? "",
+				issue_url: row?.subject?.url ?? "",
+				reason: row?.reason ?? "",
+				updated_at: row?.updated_at ?? "",
+				unread: row?.unread ?? false,
+				labels,
+				comments: [],
+				summary: summaries[key] ?? "",
+			};
 		});
 	}
 }

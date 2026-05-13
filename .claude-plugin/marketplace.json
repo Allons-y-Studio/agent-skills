@@ -1,0 +1,26 @@
+{
+  "name": "agent-skills",
+  "display_name": "@allons-y/agent-skills",
+  "plugins": [
+    {
+      "id": "design-system",
+      "name": "design-system-patterns",
+      "description": "Build, name, document, and audit UI components for design systems with expert-level HTML, CSS, ARIA, and accessibility guidance. Use this skill whenever someone is designing a new component (naming it, deciding its API, choosing ARIA roles, writing markup), reviewing or auditing an existing component library, asking about design-system naming conventions, discussing component API design (props, slots, events, CSS custom properties, design tokens), or needs accessibility guidance for interactive widgets. Also trigger when the user mentions \"design system\", \"component library\", \"pattern library\", \"UI kit\", \"ARIA pattern\", \"WAI-ARIA\", \"accessible component\", \"component API\", \"design tokens\", or asks questions like \"what should I call this component\", \"how should this component work\", \"is this component accessible\", or \"review my component library\". Even partial matches — like someone sharing HTML and asking for feedback — should trigger this skill if the markup is clearly a reusable UI pattern.",
+      "components": {
+        "skills": [
+          "design-system"
+        ]
+      }
+    },
+    {
+      "id": "gh-notification-summary",
+      "name": "gh-notification-summary",
+      "description": "Review, summarize, and manage GitHub notifications. Use this skill whenever the user mentions GitHub notifications, unread GitHub activity, open issues on their repos, or wants to catch up on project discussions — even if they don't use the word 'notifications'. Also trigger for /unsub <number>, 'mark all done', 'clear my GitHub inbox', or any request to triage, dismiss, or act on GitHub notifications.",
+      "components": {
+        "skills": [
+          "gh-notification-summary"
+        ]
+      }
+    }
+  ]
+}

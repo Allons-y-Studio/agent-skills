@@ -19,7 +19,13 @@ async function processSkill(entry) {
 	if (fs.existsSync(skillMdPath)) {
 		const content = await readFile(skillMdPath, "utf-8")
 			.then((content) => parseFrontmatter(content))
-			.catch((err) => Promise.reject(new Error(`Failed to read ${skillMdPath.cyan}: ${err.message}`)));
+			.catch((err) =>
+				Promise.reject(
+					new Error(
+						`Failed to read ${skillMdPath.cyan}: ${err.message}`
+					)
+				)
+			);
 
 		return Promise.resolve({
 			id: entry.name,
@@ -38,16 +44,26 @@ async function processSkill(entry) {
 }
 
 async function main() {
-	const pkg = await readFile(path.join(root, "package.json"), "utf-8").then((content) => JSON.parse(content));
+	const pkg = await readFile(path.join(root, "package.json"), "utf-8").then(
+		(content) => JSON.parse(content)
+	);
 	if (!pkg) {
-		return Promise.reject(new Error(`Failed to read package.json in ${path.relative(root, "package.json").cyan}`));
+		return Promise.reject(
+			new Error(
+				`Failed to read package.json in ${path.relative(root, "package.json").cyan}`
+			)
+		);
 	}
 
-	const skills = await getSkills(processSkill).then((skills) => skills.sort((a, b) => a.id.localeCompare(b.id))).catch((err) => Promise.reject(new Error(`Failed to get skills: ${err.message}`)));
+	const skills = await getSkills(processSkill)
+		.then((skills) => skills.sort((a, b) => a.id.localeCompare(b.id)))
+		.catch((err) =>
+			Promise.reject(new Error(`Failed to get skills: ${err.message}`))
+		);
 
 	// ── .claude-plugin/plugin.json ─────────────────────────────────────────
-	// Defines this repo as a Claude Code plugin. Describes the default
-	// "install all" surface. Skills are listed under components.skills.
+	// Defines this repo as a Claude Code plugin. Lists every skill bundled
+	// in the package under components.skills.
 	const pluginJson = {
 		name: "agent-skills",
 		display_name: pkg.name,
@@ -63,31 +79,21 @@ async function main() {
 		fs.mkdirSync(pluginDir, { recursive: true });
 	}
 
-	// ── marketplace.json ───────────────────────────────────────────────────
-	// Defines the marketplace catalog. Exposes two install surfaces:
-	//   1. "agent-skills" — installs every skill at once
-	//   2. One entry per individual skill for selective installs
+	// ── .claude-plugin/marketplace.json ────────────────────────────────────
+	// Defines the marketplace catalog Claude Code reads via
+	// `/plugin marketplace add`. One entry per skill — users enable each
+	// individually through the `/plugin` UI.
 	const marketplaceJson = {
 		name: "agent-skills",
 		display_name: pkg.name,
-		plugins: [
-			{
-				id: "agent-skills",
-				name: "All Skills",
-				description: `All ${skills.length} available agent skills from ${pkg.name}`,
-				components: {
-					skills: skills.map((s) => s.path),
-				},
+		plugins: skills.map((skill) => ({
+			id: skill.id,
+			name: skill.name,
+			description: skill.description,
+			components: {
+				skills: [skill.path],
 			},
-			...skills.map((skill) => ({
-				id: skill.id,
-				name: skill.name,
-				description: skill.description,
-				components: {
-					skills: [skill.path],
-				},
-			})),
-		],
+		})),
 	};
 
 	return Promise.all([
@@ -95,22 +101,50 @@ async function main() {
 			path.join(pluginDir, "plugin.json"),
 			JSON.stringify(pluginJson, null, 2) + "\n",
 			"utf-8"
-		).then(() => {
-			console.log(`${"✓".green} ${'.claude-plugin/plugin.json'.cyan} generated with: ${skills.map((s) => s.id.magenta).join(", ")}`);
-		}).catch((err) => Promise.reject(new Error(`Failed to write ${'.claude-plugin/plugin.json'.cyan} in ${path.relative(root, pluginDir).cyan}: ${err.message}`))),
+		)
+			.then(() => {
+				console.log(
+					`${"✓".green} ${".claude-plugin/plugin.json".cyan} generated with: ${skills.map((s) => s.id.magenta).join(", ")}`
+				);
+			})
+			.catch((err) =>
+				Promise.reject(
+					new Error(
+						`Failed to write ${".claude-plugin/plugin.json".cyan}: ${err.message}`
+					)
+				)
+			),
 		writeFile(
-			path.join(root, "marketplace.json"),
+			path.join(pluginDir, "marketplace.json"),
 			JSON.stringify(marketplaceJson, null, 2) + "\n",
 			"utf-8"
-		).then(() => {
-			console.log(`${"✓".green} ${'marketplace.json'.cyan} generated with: ${skills.map((s) => s.id.magenta).join(", ")}`);
-		}).catch((err) => Promise.reject(new Error(`Failed to write ${'marketplace.json'.cyan} in ${path.relative(root, "marketplace.json").cyan}: ${err.message}`))),
-	]).then(() => Promise.resolve(skills)).catch((err) => Promise.reject(new Error(`Failed to generate plugin manifest: ${err.message}`)));
+		)
+			.then(() => {
+				console.log(
+					`${"✓".green} ${".claude-plugin/marketplace.json".cyan} generated with: ${skills.map((s) => s.id.magenta).join(", ")}`
+				);
+			})
+			.catch((err) =>
+				Promise.reject(
+					new Error(
+						`Failed to write ${".claude-plugin/marketplace.json".cyan}: ${err.message}`
+					)
+				)
+			),
+	])
+		.then(() => Promise.resolve(skills))
+		.catch((err) =>
+			Promise.reject(
+				new Error(`Failed to generate plugin manifest: ${err.message}`)
+			)
+		);
 }
 
-main().then(() => {
-	process.exit(0);
-}).catch((err) => {
-	console.error(`${"✗".red} ${err.message}`);
-	process.exit(1);
-});
+main()
+	.then(() => {
+		process.exit(0);
+	})
+	.catch((err) => {
+		console.error(`${"✗".red} ${err.message}`);
+		process.exit(1);
+	});
