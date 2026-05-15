@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.0.1](https://github.com/castastrophe/agent-skills/compare/v1.0.0...v1.0.1) (2026-05-15)
+
+### 🐛 Bug Fixes
+
+* **tooling:**unify linting under eslint-plugin-jsonc and clear all config warnings ([#16](https://github.com/castastrophe/agent-skills/issues/16)) ([ad21087]())
+
+Swap out prettier-package-json for eslint-plugin-jsonc so that package.json key
+ordering, JSON sort-keys, and CSS baseline rules all run through a single yarn lint
+pass — no more separate format-check step in CI. Removes lint-staged.config.js (config
+moves inline to package.json) and cleans up the downstream warnings it exposed: bare
+code fences in design-system reference docs, [AA]/[AAA] label escaping, taxonomy heading
+levels, and dead caching imports in gh-notification-summary.
+
 ## 1.0.0 (2026-05-15)
 
 ### ⚠ BREAKING CHANGES
