@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.0.3](https://github.com/castastrophe/agent-skills/compare/v1.0.2...v1.0.3) (2026-05-15)
+
+### 🐛 Bug Fixes
+
+* **deps:**update dependency @octokit/rest to v22 ([#13](https://github.com/castastrophe/agent-skills/issues/13)) ([81e1e52]())
+
+Co-authored-by: renovate[bot] <29139614+renovate[bot]@users.noreply.github.com>
+
 ## [1.0.2](https://github.com/castastrophe/agent-skills/compare/v1.0.1...v1.0.2) (2026-05-15)
 
 ### 🐛 Bug Fixes
