@@ -120,6 +120,7 @@ body {
 	scroll-margin-block-start: 1.5rlh;
 }
 
+/* eslint-disable-next-line css/use-baseline */
 ::selection {
 	background: color-mix(in hsl, var(--theme--surface--color--accent) 80%, transparent);
 	color: var(--theme--text--Color);
@@ -264,7 +265,7 @@ section .skill-grid {
 
 h2 {
 	margin: 0 0 1rem;
-	font-family: var(--theme--heading--FontFamily);
+	font-family: var(--theme--heading--FontFamily), sans-serif;
 	font-weight: var(--theme--FontWeight--bold);
 	font-size: 1.65rem;
 	line-height: var(--theme--heading--LineHeight);
