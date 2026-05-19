@@ -182,6 +182,10 @@ Contributions are welcome — new skills, improvements to existing ones, bug fix
 
 [MPL-2.0](LICENSE) — use freely, modify as needed; changes to MPL-licensed files should be shared back under the same license.
 
+---
+
+Built and maintained by [Allons-y Studio](https://allons-y.studio) · Cassondra Roberts.
+
 [workflow-image]: https://github.com/castastrophe/agent-skills/actions/workflows/test.yml/badge.svg?branch=main
 [workflow-url]: https://github.com/castastrophe/agent-skills/actions/workflows/test.yml/badge.svg
 [npm-image]: https://img.shields.io/npm/v/@allons-y/agent-skills?logo=npm
