@@ -11,8 +11,6 @@
 
 Each skill is a self-contained directory with a `SKILL.md`, Node.js implementation scripts, and a test suite. Claude Code installs natively via the plugin marketplace; other agent harnesses can vendor any skill directory via `npx`.
 
----
-
 ## Quick Start
 
 ### Claude Code (recommended)
@@ -48,16 +46,12 @@ For Node-runtime skills with dependencies, run `npm install` in the installed di
 
 > **Note:** `.zip`-based distribution is deprecated and will be removed in the next major version. The installer now copies the skill directory directly.
 
----
-
 ## Available Skills
 
 | Skill                                                                | Description                                                                                                                  | Trigger                                                                                  |
 | -------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------- |
 | [`gh-notification-summary`](skills/gh-notification-summary/SKILL.md) | Review, summarize, and manage GitHub notifications via an interactive local dashboard                                        | "check my GitHub notifications", `/unsub <number>`, "mark all done"                      |
 | [`design-system`](skills/design-system/SKILL.md)                     | Build, name, document, and audit UI components with expert ARIA, accessibility, design token, typography, and i18n guidance  | "design system", "component library", "ARIA pattern", "what should I call this component", "review my component library" |
-
----
 
 ## Programmatic Usage
 
@@ -67,6 +61,7 @@ The package exposes a `getSkills()` helper for tool builders who want to list or
 import { getSkills } from "@allons-y/agent-skills";
 
 const skills = getSkills();
+// returns =>
 // [
 //   {
 //     name: 'gh-notification-summary',
@@ -82,8 +77,6 @@ const skills = getSkills();
 //   }
 // ]
 ```
-
----
 
 ## Development
 
@@ -115,8 +108,6 @@ yarn workspaces foreach -A run test
 
 For full setup instructions — running tests, linting, evals, and publishing — see [CONTRIBUTING.md](CONTRIBUTING.md).
 
----
-
 ## Project Structure
 
 ```sh
@@ -140,8 +131,6 @@ agent-skills/                         # Root workspace (publishes to npm)
 └── .github/
     └── workflows/                    # CI and release automation
 ```
-
----
 
 ## FAQ
 
@@ -177,8 +166,6 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for the full guide: environment setup, ru
 
 </details>
 
----
-
 ## Contributing
 
 Contributions are welcome — new skills, improvements to existing ones, bug fixes, and documentation. See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
@@ -191,11 +178,9 @@ Contributions are welcome — new skills, improvements to existing ones, bug fix
 - Daily standup generator from git log
 - Accessibility audit runner (paired with `design-system`)
 
----
-
 ## License
 
-[Apache 2.0](LICENSE) — use freely, modify as needed, contribute back if you can.
+[MPL-2.0](LICENSE) — use freely, modify as needed; changes to MPL-licensed files should be shared back under the same license.
 
 [workflow-image]: https://github.com/castastrophe/agent-skills/actions/workflows/test.yml/badge.svg?branch=main
 [workflow-url]: https://github.com/castastrophe/agent-skills/actions/workflows/test.yml/badge.svg

@@ -6,7 +6,7 @@
   "name": "@allons-y/agent-skills",
   "version": "1.0.3",
   "description": "A collection of skills designed for Claude to streamline processes and reduce token-use",
-  "license": "Apache-2.0",
+  "license": "MPL-2.0",
   "author": "Cassondra Roberts <castastrophe@users.noreply.github.com> (https://allons-y.llc)",
   "homepage": "https://github.com/castastrophe/agent-skills#readme",
   "funding": [
