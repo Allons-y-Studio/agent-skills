@@ -13,6 +13,8 @@
   "bugs": {
     "url": "https://github.com/Allons-y-Studio/agent-skills/issues"
   },
+  "type": "module",
+  "main": "eleventy.config.js",
   "scripts": {
     "build": "eleventy",
     "ci": "cross-env ELEVENTY_ENV=production yarn build",

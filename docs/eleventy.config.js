@@ -19,4 +19,5 @@ export default async function ( config ) {
 	} );
 
 	config.addWatchTarget( "styles.css" );
+	config.addPassthroughCopy( "*.png" );
 };

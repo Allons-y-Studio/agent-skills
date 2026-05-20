@@ -3,11 +3,10 @@ themeColor: "#DD18B3"
 tagline_short: "specialized skills for AI coding agents"
 tagline: "Specialized agent skills that streamline common developer workflows and reduce token usage."
 ---
-{% set example = skills[0] -%}
 <!doctype html>
 <html lang="en-US">
 	<head>
-    	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
 		<meta charset="UTF-8">
 		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
 		<meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
@@ -16,21 +15,19 @@ tagline: "Specialized agent skills that streamline common developer workflows an
 		<meta name="color-scheme" content="light dark">
 
 		<title>{{ title }} | {{ tagline_short }}</title>
-		<meta name="description" content="{{ description }}"/>
-		<meta name="keywords" content="{{ keywords }}"/>
-		<meta name="author" content="{{ author }}"/>
+		<meta name="description" content="{{ description }}" />
+		<meta name="keywords" content="{{ keywords }}" />
+		<meta name="author" content="{{ author }}" />
 
 		<meta name="robots" content="index, follow">
 		<meta name="googlebot" content="index, follow">
 		<meta name="bingbot" content="index, follow">
 		<meta name="yandexbot" content="index, follow">
 
-		<!-- Open Graph data -->
 		<meta property="og:locale" content="en-US" />
 		<meta property="og:title" content="{{ title }}">
 		<meta property="og:url" content="{{ url }}">
 		<meta property="og:description" content="{{ description }}">
-		{# <meta property="og:image" content="{{ site.banner | imgSrc('png') | htmlBaseUrl(site.url) }}" /> #}
 		<meta property="og:site_name" content="{{ title }}">
 		<meta name="fediverse:creator" content="@castastrophe@front-end.social" />
 
@@ -44,223 +41,219 @@ tagline: "Specialized agent skills that streamline common developer workflows an
 
 		<style>{% include "styles.css" %}</style>
 
-		{# Load Font Awesome #}
 		<script src="https://kit.fontawesome.com/42e99b4632.js" crossorigin="anonymous"></script>
 	</head>
 	<body>
 		<a class="skip-link" href="#main">Skip to content</a>
 
-		<header>
-			<h1>{{ title }}</h1>
-			<p class="tagline">{{ tagline }}</p>
-			<p class="badges" aria-label="Project badges">
-				<a
-					href="https://github.com/Allons-y-Studio/agent-skills/actions/workflows/test.yml"
-					><img
-						alt="CI status"
-						src="https://github.com/Allons-y-Studio/agent-skills/actions/workflows/test.yml/badge.svg?branch=main"
-				/></a>
-				<a href="https://www.npmjs.com/package/@allons-y/agent-skills"
-					><img
-						alt="npm version"
-						src="https://img.shields.io/npm/v/@allons-y/agent-skills?logo=npm"
-				/></a>
-				<a href="https://www.npmjs.com/package/@allons-y/agent-skills"
-					><img
-						alt="npm downloads"
-						src="https://img.shields.io/npm/dw/@allons-y/agent-skills?logo=npm"
-				/></a>
-				<img
-					alt="Node 24+"
-					src="https://img.shields.io/badge/node-%3E%3D24-brightgreen?logo=node.js"
-				/>
-				<img
-					alt="License: MPL-2.0"
-					src="https://img.shields.io/badge/license-MPL--2.0-blue.svg"
-				/>
-			</p>
-			<p class="cta">
-				<a class="btn btn-primary" href="#install">Get started</a>
-				<a class="btn" href="https://github.com/Allons-y-Studio/agent-skills"
-					>View on GitHub</a
-				>
-			</p>
+		<header class="site-header">
+			<div class="hero">
+				<p class="eyebrow">{{ pkg_name }} · v{{ version }}</p>
+				<h1>{{ title }}</h1>
+				<p class="tagline">{{ tagline }}</p>
+				<p class="badges" aria-label="Project badges">
+					<a href="https://github.com/{{ repo.slug }}/actions/workflows/test.yml"><img alt="CI status" src="https://github.com/{{ repo.slug }}/actions/workflows/test.yml/badge.svg?branch=main"></a>
+					<a href="{{ npm_url }}"><img alt="npm version" src="https://img.shields.io/npm/v/{{ pkg_name }}?logo=npm"></a>
+					<a href="{{ npm_url }}"><img alt="npm downloads" src="https://img.shields.io/npm/dw/{{ pkg_name }}?logo=npm"></a>
+					<img alt="Node 24+" src="https://img.shields.io/badge/node-%3E%3D24-brightgreen?logo=node.js">
+					<img alt="License: MPL-2.0" src="https://img.shields.io/badge/license-MPL--2.0-blue.svg">
+				</p>
+				<p class="cta">
+					<a class="btn btn-primary" href="#install">Get started</a>
+					<a class="btn" href="{{ repo.url }}"><span class="fa-brands fa-github" aria-hidden="true"></span> View on GitHub</a>
+				</p>
+			</div>
 		</header>
 
 		<main id="main">
 			<section id="what" aria-labelledby="what-heading">
-				<h2 id="what-heading">
-					What is this?
-					<a class="anchor" href="#what" aria-label="Permalink to What is this?"
-						>#</a
-					>
-				</h2>
-				<p>
-					<strong>Agent skills</strong> are bite-sized, self-contained capability
-					packs you can drop into an AI coding agent. Each skill bundles a
-					<code>SKILL.md</code> (the prompt and trigger description), a
-					Node.js implementation, and a test suite — all under one directory.
-				</p>
-				<p>
-					Claude Code installs them natively via the plugin marketplace. Other
-					agent harnesses — Cursor, OpenCode, Aider, or anything built on the
-					Claude Agent SDK — can vendor any skill directory with one
-					<code>npx</code> command. No Claude-specific wiring.
-				</p>
+				<div class="section-head">
+					<h2 id="what-heading">
+						What is this?
+						<a class="anchor" href="#what" aria-label="Permalink to What is this?">#</a>
+					</h2>
+				</div>
+				<div class="prose">
+					<p>
+						<strong>Agent skills</strong> are bite-sized, self-contained capability
+						packs you can drop into an AI coding agent. Each skill bundles a
+						<code>SKILL.md</code> (the prompt and trigger description), a
+						Node.js implementation, and a test suite — all under one directory.
+					</p>
+					<p>
+						Claude Code installs them natively via the plugin marketplace. Other
+						agent harnesses — Cursor, OpenCode, Aider, or anything built on the
+						Claude Agent SDK — can vendor any skill directory with one
+						<code>npx</code> command. No Claude-specific wiring.
+					</p>
+				</div>
 			</section>
 
+			{% if featured -%}
+			<section id="featured" aria-labelledby="featured-heading" class="featured">
+				<div class="featured-card">
+					<div class="featured-body">
+						<p class="eyebrow">Featured skill</p>
+						<h2 id="featured-heading">
+							<a href="{{ featured.url }}">{{ featured.name }}</a>
+							<a class="anchor" href="#featured" aria-label="Permalink to featured skill">#</a>
+						</h2>
+						<p class="featured-description">{{ featured.description }}</p>
+						<p class="featured-cta">
+							<a class="btn btn-primary" href="{{ featured.url }}">Read the docs</a>
+							<a class="btn" href="#install">Install it</a>
+						</p>
+					</div>
+					<aside class="featured-side" aria-label="Quick install for {{ featured.name }}">
+						<p class="featured-side-label">Install with Claude Code</p>
+						<pre><code>/plugin marketplace add {{ repo.slug }}
+/plugin install {{ featured.name }}@{{ marketplace_name }}</code></pre>
+					</aside>
+				</div>
+			</section>
+			{%- endif %}
+
 			<section id="skills" aria-labelledby="skills-heading">
-				<h2 id="skills-heading">
-					Available skills
-					<a class="anchor" href="#skills" aria-label="Permalink to Available skills"
-						>#</a
-					>
-				</h2>
+				<div class="section-head">
+					<h2 id="skills-heading">
+						Available skills
+						<a class="anchor" href="#skills" aria-label="Permalink to Available skills">#</a>
+					</h2>
+					<p class="section-lede">All skills currently published in this marketplace.</p>
+				</div>
 				<div class="skill-grid">
 					{% for skill in skills -%}
-					<article class="skill-card">
-						<h3><a href="{{ skill.url }}">{{ skill.name }}</a></h3>
-						<p>{{ skill.description }}
-						</p>
-						{% if skill.triggers.length > 0 -%}
-						<p class="triggers">
-							<strong>Triggers:</strong> {% for trigger in skill.triggers %}<code>"{{ trigger }}"</code>{% if not loop.last %}, {% endif %}{% endfor %}
-						</p>
-						{%- endif %}
+					<article class="skill-card{% if skill.name == featured.name %} skill-card-featured{% endif %}">
+						<header class="skill-card-head">
+							<h3><a href="{{ skill.url }}">{{ skill.name }}</a></h3>
+							{% if skill.name == featured.name %}<span class="chip chip-featured">Featured</span>{% endif %}
+						</header>
+						<p class="skill-card-description">{{ skill.description | truncate(220) }}</p>
 						{% if skill.commands.length > 0 -%}
-						<p class="commands">
-							<strong>Commands:</strong> {% for command in skill.commands %}<code>"{{ command }}"</code>{% if not loop.last %}, {% endif %}{% endfor %}
+						<p class="meta">
+							<span class="meta-label">Commands</span>
+							{% for command in skill.commands %}<code>{{ command }}</code>{% if not loop.last %} {% endif %}{% endfor %}
 						</p>
 						{%- endif %}
+						{% if skill.triggers.length > 0 -%}
+						<p class="meta">
+							<span class="meta-label">Triggers</span>
+							{% for trigger in skill.triggers %}<code>"{{ trigger }}"</code>{% if not loop.last %} {% endif %}{% endfor %}
+						</p>
+						{%- endif %}
+						<p class="skill-card-cta">
+							<a href="{{ skill.url }}">Open SKILL.md <span aria-hidden="true">→</span></a>
+						</p>
 					</article>
 					{%- endfor %}
 				</div>
 			</section>
 
 			<section id="install" aria-labelledby="install-heading">
-				<h2 id="install-heading">
-					Install
-					<a class="anchor" href="#install" aria-label="Permalink to Install">#</a>
-				</h2>
-
-				<div class="install-variant">
-					<h3>Claude Code (recommended)</h3>
-					<p>
-						Register this repo as a marketplace, then install skills through the
-						<code>/plugin</code> UI.
-					</p>
-					<pre><code>/plugin marketplace add {{ repo.name }}
-/plugin install {{ example.name }}@{{ pkg_name | last }}</code></pre>
+				<div class="section-head">
+					<h2 id="install-heading">
+						Install
+						<a class="anchor" href="#install" aria-label="Permalink to Install">#</a>
+					</h2>
+					<p class="section-lede">Pick the card for your agent harness. Every install uses the same skill payload — there's no Claude-specific wiring inside <code>SKILL.md</code>.</p>
 				</div>
-
-				<div class="install-variant">
-					<h3>Other agent harnesses</h3>
-					<p>
-						Use the <code>npx</code> installer to vendor any skill directory into
-						your agent's skill folder. The installed payload is plain — just
-						<code>SKILL.md</code> + scripts.
-					</p>
-					<ul>
-						<li>
-							<h4>List available skills</h4>
-							<pre><code>npx {{ pkg_name }}</code></pre>
-						</li>
-						<li>
-							<h4>Install a skill to the default location (~/.claude/skills/)</h4>
-							<pre><code>npx {{ pkg_name }} {{ example.name }}</code></pre>
-						</li>
-						<li>
-							<h4>Install to your agent's skill directory</h4>
-							<pre><code>npx {{ pkg_name }} {{ example.name }} --dir ~/.config/cursor/skills</code></pre>
-						</li>
-						<li>
-							<h4>Install everything</h4>
-							<pre><code>npx {{ pkg_name }} --all</code></pre>
-						</li>
-					</ul>
-					<p>
-						For Node-runtime skills with dependencies, run
-						<code>npm install</code> in the installed directory once vendored.
-					</p>
+				<div class="harness-grid">
+					{% for harness in harnesses -%}
+					<article class="harness-card{% if harness.recommended %} harness-card-recommended{% endif %}" id="install-{{ harness.id }}">
+						<header class="harness-card-head">
+							<span class="harness-icon" aria-hidden="true"><span class="{{ harness.icon }} fa-xl"></span></span>
+							<div>
+								<h3>{{ harness.name }}{% if harness.recommended %} <span class="chip chip-recommended">Recommended</span>{% endif %}</h3>
+								<p class="harness-tagline">{{ harness.tagline }}</p>
+							</div>
+						</header>
+						<p class="harness-description">{{ harness.description | safe }}</p>
+						<pre><code>{% for command in harness.commands %}{{ command }}{% if not loop.last %}
+{% endif %}{% endfor %}</code></pre>
+					</article>
+					{%- endfor %}
 				</div>
+				<p class="install-note">
+					For Node-runtime skills with dependencies, run
+					<code>npm install</code> in the vendored directory once.
+				</p>
 			</section>
 
 			<section id="programmatic" aria-labelledby="programmatic-heading">
-				<h2 id="programmatic-heading">
-					Programmatic usage
-					<a
-						class="anchor"
-						href="#programmatic"
-						aria-label="Permalink to Programmatic usage"
-						>#</a
-					>
-				</h2>
-				<p>
-					Tool builders can enumerate skills dynamically via the exported
-					<code>getSkills()</code> helper:
-				</p>
-				<pre><code>import { getSkills } from "{{ title }}";
+				<div class="section-head">
+					<h2 id="programmatic-heading">
+						Programmatic usage
+						<a class="anchor" href="#programmatic" aria-label="Permalink to Programmatic usage">#</a>
+					</h2>
+					<p class="section-lede">Tool builders can enumerate skills dynamically via the exported <code>getSkills()</code> helper.</p>
+				</div>
+				<pre><code>import { getSkills } from "{{ pkg_name }}";
 
 const skills = getSkills();
 // =>
 // [
 //   {
-//     name: "{{ example.name }}",
-//     path: "/path/to/skills/{{ example.name }}",
-//     description: "{{ example.description | truncate(50) }}",
-//     mdPath: "/path/to/skills/{{ example.name }}/SKILL.md",
+//     name: "{{ featured.name }}",
+//     path: "/path/to/skills/{{ featured.name }}",
+//     description: "{{ featured.description | truncate(50) }}",
+//     mdPath: "/path/to/skills/{{ featured.name }}/SKILL.md",
 //   },
 //   ...
 // ]</code></pre>
 			</section>
 
 			<section id="contributing" aria-labelledby="contributing-heading">
-				<h2 id="contributing-heading">
-					<a
-						class="anchor"
-						href="#contributing"
-						aria-label="Permalink to Contributing"
-						>#</a
-					>
-					Contributing
-				</h2>
-				<p>
-					New skills, improvements, bug fixes, and documentation are all welcome.
-					See
-					<a
-						href="{{ repo.url }}/blob/main/.github/CONTRIBUTING.md"
-						>CONTRIBUTING.md</a
-					>
-					for environment setup, the test/lint/eval workflow, and the PR
-					checklist.
-				</p>
-				<p>Some ideas if you're looking for a starting point:</p>
-				<ul>
-					<li>GitHub PR review summarizer</li>
-					<li>Linear / Jira issue triage</li>
-					<li>Slack digest summarizer</li>
-					<li>Daily standup generator from git log</li>
-					<li>
-						Accessibility audit runner (pairs nicely with
-						<code>design-system</code>)
-					</li>
-				</ul>
+				<div class="section-head">
+					<h2 id="contributing-heading">
+						Contributing
+						<a class="anchor" href="#contributing" aria-label="Permalink to Contributing">#</a>
+					</h2>
+				</div>
+				<div class="prose">
+					<p>
+						New skills, improvements, bug fixes, and documentation are all welcome.
+						See <a href="{{ repo.url }}/blob/main/.github/CONTRIBUTING.md">CONTRIBUTING.md</a>
+						for environment setup, the test/lint/eval workflow, and the PR
+						checklist.
+					</p>
+					<p>Some ideas if you're looking for a starting point:</p>
+					<ul>
+						<li>GitHub PR review summarizer</li>
+						<li>Linear / Jira issue triage</li>
+						<li>Slack digest summarizer</li>
+						<li>Daily standup generator from git log</li>
+						<li>Accessibility audit runner (pairs nicely with <code>design-system</code>)</li>
+					</ul>
+				</div>
 			</section>
 		</main>
 
-		<footer style="display: flex; flex-direction: column; gap: .8rem; align-items: center; justify-content: center;">
-			<div style="display: flex; flex-direction: row; gap: 1rem; align-items: start; justify-content: space-evenly;">
-				<p>Licensed under <a href="{{ license.url }}">{{ license.name }}</a></p>
-				<div style="display: inline-flex; flex-direction: row; gap: 2rem; align-items: start; justify-content: end;">
-					<a href="{{ repo.url }}"><span class="fa-brands fa-github"></span> GitHub</a>
-					<a href="{{ npm_url }}"><span class="fa-brands fa-npm"></span> npm</a>
+		<footer class="site-footer">
+			<div class="footer-grid">
+				<div class="footer-col footer-brand">
+					<p class="footer-title">{{ title }}</p>
+					<p class="footer-tagline">{{ tagline_short | capitalize }}.</p>
+					<p class="footer-meta"><a href="{{ license.url }}">Licensed under {{ license.name }}</a></p>
+				</div>
+				<div class="footer-col">
+					<p class="footer-title">Resources</p>
+					<ul>
+						<li><a href="{{ repo.url }}"><span class="fa-brands fa-github" aria-hidden="true"></span> GitHub</a></li>
+						<li><a href="{{ npm_url }}"><span class="fa-brands fa-npm" aria-hidden="true"></span> npm</a></li>
+					</ul>
+				</div>
+				<div class="footer-col">
+					<p class="footer-title">Resources</p>
+					<ul>
+						<li><a href="{{ bugs.url }}">Report an issue</a></li>
+						<li><a href="{{ repo.url }}/blob/main/.github/CONTRIBUTING.md">Contributing guide</a></li>
+					</ul>
+				</div>
+				<div class="footer-col">
+					<p class="footer-title">brought to you by</p>
+					<a href="https://allons-y.studio"><img src="./allons-y_studio.png" alt="Allons-y Studio logo" width="200" height="100"></a>
 				</div>
 			</div>
-			<p>
-				Built and maintained by
-				<a href="https://allons-y.studio"><span class="fa-solid fa-mug-hot"></span> Allons-y Studio</a> {{ divider | safe }} <a href="https://github.com/castastrophe"><span class="fa-solid fa-user"></span> Cassondra
-				Roberts</a>.
-			</p>
 		</footer>
 	</body>
 </html>
