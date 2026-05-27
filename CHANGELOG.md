@@ -2,6 +2,111 @@
 
 All notable changes to this project will be documented in this file. See [Conventional Commits](https://conventionalcommits.org) for commit guidelines.
 
+## [1.1.0](https://github.com/Allons-y-Studio/agent-skills/compare/v1.0.3...v1.1.0) (2026-05-27)
+
+### ✨ Features
+
+* **dreamlight-valley:**new skill for cooking, gathering, and inventory management ([#21](https://github.com/Allons-y-Studio/agent-skills/issues/21)) ([440e59c]())
+
+## Summary
+
+Adds a brand-new `dreamlight-valley` skill that gives Claude a complete
+Disney Dreamlight Valley catalog and three focused modes — identify a
+dish, recommend what to cook, generate a gather checklist — all from a
+single prompt or slash command.
+
+## What it does
+
+- **`/recipe`** — Identify a dish from a typed name or a cookbook
+screenshot and return its ingredients. Fuzzy-matches misread or accented
+names; handles multi-dish screenshots one block at a time; optionally
+surfaces star rating, energy, and sell price.
+- **`/cook`** — Recommend the best recipes to cook from the ingredients
+on hand, ranked by value per ingredient consumed. Reads quantities from
+a backpack screenshot or accepts them as text. Supports `--profit` /
+`--energy` objectives, per-course filtering, and an inventory floor so a
+recommendation never wipes out a stockpile.
+- **`/restock`** — Read a storage screenshot, compare against the full
+catalog, and output a categorized Markdown gather checklist. Includes a
+99-skip shortcut, per-category floors (cooking at 50, materials at 99),
+and uncertainty flagging.
+
+Say anything like "what's in Ratatouille?", "what should I cook right
+now?", "/cook --profit lemon, garlic, herring", or upload a screenshot
+of a cookbook / backpack / storage screen — the skill routes correctly.
+
+## Bundled data (current to Wishblossom Mountains)
+
+- 472 recipes with star rating, course, energy, sale price, and
+ingredient slots (fixed or category-typed)
+- 386-item catalog: 142 ingredients · 86 flowers · 62 forageables · 50
+gems · 45 fish — each with method, locations, sale price, energy, etc.
+- 13 labeled sprite sheets (one per category) + `sprite-coords.json`
+sidecar mapping every catalog item to its exact pixel position for
+direct lookup
+- Reference docs split by mode (`identify.md`, `recommend.md`,
+`stock-check.md`) plus icon-reading cues and ingredient-category notes
+- Plain-text `dreamlight-valley.md` config file users can drop in `./`
+or `~/.config/` for per-player defaults
+
+## Local catalog preview
+
+`yarn workspace @allons-y/skill-dreamlight-valley preview` boots a local
+browser at http://localhost:8765 — search/filter/sort the entire
+catalog, styled to match the in-game palette (Josefin Sans, gold
+gradients on a burgundy/indigo background). Each recipe ingredient links
+to its catalog entry; sprites render inline via the coords sidecar;
+keyboard accessible (WAI-ARIA tabs with arrow-key navigation, native
+datalist autocomplete on search inputs).
+
+## Infrastructure
+
+- New `scripts/build-sprites.js` (Node + sharp): regenerates
+`sprite-coords.json` from `gatherables.json` deterministically; rebuilds
+sprite sheets when source PNGs are present in
+`references/images/<category>/*.png`
+- `scripts/run-evals.js` generalised to auto-register `commands/*.md`
+files as evaluable tools (was previously hardcoded for Python scripts
+and the gh-notifications CLI)
+- `c8` declared as a devDependency on this skill (needed for `yarn
+coverage` to find the binary in yarn workspaces)
+
+## Test plan
+
+- [x] `yarn workspace @allons-y/skill-dreamlight-valley test` — 20
+data-integrity tests pass (gatherables schema/duplicates/enums, recipes
+schema/cross-references, sprite-coords layout consistency)
+- [x] `yarn workspace @allons-y/skill-dreamlight-valley lint` — clean
+- [x] `yarn workspace @allons-y/skill-dreamlight-valley coverage` — runs
+(skill is data-only so 0% coverage is expected)
+- [x] `yarn workspace @allons-y/skill-dreamlight-valley build:sprites` —
+regenerates coords + any sheets whose source images exist
+- [x] `yarn workspace @allons-y/skill-dreamlight-valley preview` — local
+catalog browser runs on http://localhost:8765
+- [ ] 17 LLM evals under `evals/evals.json` (run with
+`ANTHROPIC_API_KEY` set) — cover routing for `/recipe`, `/cook`,
+`/restock` plus four negative cases
+
+
+### 📚 Documentation
+
+*GitHub Pages site, MPL-2.0 relicense, Renovate refresh ([#19](https://github.com/Allons-y-Studio/agent-skills/issues/19)) ([c3677d9]())
+
+## Summary
+
+- **New docs site** at `/docs` — single-page, brand-aligned with
+Allons-y Studio (Roboto + Dancing Script + EB Garamond + PT Mono,
+magenta-red accent, warm neutral surfaces, `--theme--*` token system
+mirroring the main site). Ready to publish via **Settings → Pages →
+Deploy from a branch → `main` / `/docs`**.
+- **Relicense Apache-2.0 → MPL-2.0** in `LICENSE`, `package.json`
+(SPDX), and the README license section. File-level copyleft fits
+skill-style code better.
+- **Renovate refresh** — moved to `config:best-practices` with grouped
+updates for the commitlint, jest, eslint, and semantic-release
+ecosystems. New updater workflow added.
+- README license blurb updated; rest of the README validated as current.
+
 ## [1.0.3](https://github.com/castastrophe/agent-skills/compare/v1.0.2...v1.0.3) (2026-05-15)
 
 ### 🐛 Bug Fixes
