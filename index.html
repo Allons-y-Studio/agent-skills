@@ -1,259 +1,1031 @@
 <!doctype html>
-<html lang="en">
+<html lang="en-US">
 	<head>
-		<meta charset="utf-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1" />
-		<title>@allons-y/agent-skills — specialized skills for AI coding agents</title>
-		<meta
-			name="description"
-			content="A collection of self-contained agent skills that streamline common developer workflows and reduce token usage. Install in Claude Code via the plugin marketplace, or vendor into any agent harness with npx."
-		/>
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
-		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-		<link
-			rel="stylesheet"
-			href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@600;700&family=EB+Garamond:ital,wght@0,400;0,500;1,400&family=PT+Mono&family=Roboto:wght@300;400;500;600;700&display=swap"
-		/>
-		<link rel="stylesheet" href="styles.css" />
-		<meta property="og:title" content="@allons-y/agent-skills" />
-		<meta
-			property="og:description"
-			content="Specialized agent skills that streamline common developer workflows and reduce token usage."
-		/>
-		<meta property="og:type" content="website" />
+		<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+		<meta charset="UTF-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
+		<meta name="viewport" content="width=device-width, minimum-scale=1.0, initial-scale=1.0, user-scalable=yes">
+
+		<meta name="theme-color" content="#DD18B3">
+		<meta name="color-scheme" content="light dark">
+
+        
+		<title>@allons-y/agent-skills | specialized skills for AI coding agents</title>
+		<meta name="description" content="">
+		<meta name="keywords" content="">
+		<meta name="author" content="">
+
+		<meta name="robots" content="index, follow">
+		<meta name="googlebot" content="index, follow">
+		<meta name="bingbot" content="index, follow">
+		<meta name="yandexbot" content="index, follow">
+
+		<meta property="og:locale" content="en-US">
+		<meta property="og:title" content="@allons-y/agent-skills">
+		<meta property="og:url" content="https://github.com/Allons-y-Studio/agent-skills#readme">
+		<meta property="og:description" content="A collection of self-contained agent skills that streamline common developer workflows and reduce token usage. Install in Claude Code via the plugin marketplace, or vendor into any agent harness with npx.">
+		<meta property="og:site_name" content="@allons-y/agent-skills">
+		<meta name="fediverse:creator" content="@castastrophe@front-end.social">
+
+		<link rel="icon" href="/favicon.ico" sizes="32×32">
+		<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+		<link rel="apple-touch-icon" href="/favicon.svg">
+
+		<link rel="preconnect" href="https://fonts.googleapis.com">
+		<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+		<link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400..700&family=EB+Garamond:ital,wght@0,400..800;1,400..800&family=PT+Mono&family=Roboto:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
+
+		<script src="https://kit.fontawesome.com/42e99b4632.js" crossorigin="anonymous"></script>
+
+        <style>/* ============================================================
+   Allons-y Studio — brand-aligned theme for agent-skills docs
+   Mirrors tokens from @allons-y/website/pages/css/theme.css
+   ============================================================ */
+
+:root {
+	color-scheme: light dark;
+
+	/* ---- Brand palette ---- */
+	--accent--red: hsl(336, 65%, 50%);
+	--accent--orange: hsl(24, 100%, 65%);
+	--accent--blue: hsl(192, 70%, 50%);
+	--accent--yellow: light-dark(hsl(42, 100%, 71%), hsla(42, 100%, 60%, 1));
+
+	--base: var(--accent--red);
+
+	/* ---- Font weights ---- */
+	--theme--FontWeight--light: 300;
+	--theme--FontWeight: 400;
+	--theme--FontWeight--medium: 500;
+	--theme--FontWeight--semi-bold: 600;
+	--theme--FontWeight--bold: 700;
+
+	/* ---- Line heights ---- */
+	--theme--LineHeight--dense: 1.1;
+	--theme--LineHeight: 1.4;
+	--theme--LineHeight--spacious: 1.8;
+
+	/* ---- Typography ---- */
+	--theme--text--FontFamily:
+		"Roboto", "Lato", "Helvetica Neue", Helvetica, Arial, sans-serif;
+	--theme--text--FontFamily--signature: "Dancing Script", cursive;
+	--theme--text--FontFamily--dense: "EB Garamond", "Georgia", serif;
+	--theme--code--FontFamily: "PT Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+
+	--theme--text--Color: light-dark(hsl(40, 12%, 20%), hsl(0, 0%, 100%));
+	--theme--text--Color--subtle: light-dark(hsl(40, 10%, 30%), hsl(0, 0%, 70%));
+	--theme--text--Color--invert: light-dark(hsl(0, 0%, 100%), hsl(40, 12%, 20%));
+
+	--theme--heading--FontFamily: var(--theme--text--FontFamily);
+	--theme--heading--LineHeight: var(--theme--LineHeight--dense);
+	--theme--heading--Color: var(--theme--text--Color);
+
+	--theme--code--FontSize: 0.875em;
+	--theme--code--LineHeight: var(--theme--LineHeight);
+
+	/* ---- Shape ---- */
+	--theme--BorderRadius: 0.4em;
+	--theme--BorderRadius--tight: 0.2em;
+	--theme--BorderWidth--thin: 1px;
+	--theme--BorderWidth: 2px;
+	--theme--OutlineOffset: 2px;
+	--theme--Outline: 1px;
+
+	/* ---- Spacing ---- */
+	--theme--container--space: 16px;
+	--theme--content--space: 10px;
+
+	/* ---- Sizing ---- */
+	--theme--container--MaxWidth: 1200px;
+	--theme--content--MaxWidth: 80ch;
+
+	/* ---- Surfaces ---- */
+	--theme--surface--color: light-dark(hsl(0, 0%, 98%), hsl(0, 0%, 10%));
+	--theme--surface--color--emphasis: light-dark(hsl(40, 12%, 93%), hsl(0, 1%, 18%));
+	--theme--surface--color--sunken: light-dark(hsl(40, 14%, 96%), hsl(0, 0%, 7%));
+	--theme--ui--color--subtle: light-dark(hsl(0, 0%, 90%), hsl(0, 0%, 30%));
+	--theme--ui--color--border: light-dark(hsl(40, 10%, 85%), hsl(0, 0%, 25%));
+
+	/* ---- Shadows ---- */
+	--theme--container--shadow: 0 10px 15px -10px;
+	--theme--container--shadow-color: light-dark(hsl(0, 0%, 60%), hsl(0, 0%, 30%));
+	--theme--card--shadow: 0 1px 2px hsl(0deg 0% 0% / 0.04), 0 4px 12px -6px hsl(0deg 0% 0% / 0.06);
+
+	@media screen and (width <= 768px) {
+		--theme--container--space: 10px;
+		--theme--container--MaxWidth: 100%;
+	}
+}
+
+/* Derived accent tokens (re-compute when --base changes) */
+:root {
+	--theme--ui--color: var(--base);
+	--theme--surface--color--accent: light-dark(
+		color-mix(in oklch, var(--base) 12%, var(--theme--surface--color) 80%),
+		color-mix(in hsl, var(--base) 30%, transparent)
+	);
+	--theme--text--Color--accent: light-dark(
+		var(--base),
+		color-mix(in hsl, var(--base) 90%, white)
+	);
+	--theme--link--Color: var(--theme--text--Color--accent);
+	--theme--link--Color--hover: color-mix(
+		in oklch,
+		var(--theme--link--Color) 90%,
+		var(--theme--text--Color)
+	);
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+* {
+	box-sizing: border-box;
+}
+
+html {
+	scroll-behavior: smooth;
+	scroll-padding-block-start: var(--theme--container--space);
+}
+
+body {
+	margin: 0;
+	background: var(--theme--surface--color);
+	color: var(--theme--text--Color);
+	font-family: var(--theme--text--FontFamily);
+	font-weight: var(--theme--FontWeight);
+	line-height: var(--theme--LineHeight);
+	font-optical-sizing: auto;
+	-webkit-font-smoothing: subpixel-antialiased;
+}
+
+[id] {
+	scroll-margin-block-start: 1.5rlh;
+}
+
+/* eslint-disable-next-line css/use-baseline */
+::selection {
+	background: color-mix(in hsl, var(--theme--surface--color--accent) 80%, transparent);
+	color: var(--theme--text--Color);
+}
+
+a {
+	color: var(--theme--link--Color);
+	text-decoration: none;
+	text-underline-offset: 0.2ex;
+}
+
+a:hover,
+a:focus-visible {
+	text-decoration: underline;
+	color: var(--theme--link--Color--hover);
+}
+
+:focus-visible {
+	outline: var(--theme--Outline) solid var(--base);
+	outline-offset: var(--theme--OutlineOffset);
+	border-radius: var(--theme--BorderRadius--tight);
+}
+
+main,
+.site-header,
+.site-footer {
+	max-width: var(--theme--container--MaxWidth);
+	margin-inline: auto;
+	padding-inline: clamp(1rem, 4vw, 2rem);
+}
+
+/* Skip link */
+.skip-link {
+	position: absolute;
+	left: -9999px;
+	top: 0;
+	background: var(--base);
+	color: var(--theme--text--Color--invert);
+	padding: 0.5rem 1rem;
+	border-radius: 0 0 var(--theme--BorderRadius) 0;
+	font-weight: var(--theme--FontWeight--medium);
+}
+
+.skip-link:focus {
+	left: 0;
+	z-index: 10;
+}
+
+/* ============================================================
+   HEADER / HERO
+   ============================================================ */
+.site-header {
+	padding-block: 4.5rem 2.5rem;
+}
+
+.hero {
+	text-align: center;
+	max-width: 52rem;
+	margin-inline: auto;
+}
+
+.eyebrow {
+	display: inline-block;
+	margin: 0 0 1rem;
+	padding: 0.25rem 0.75rem;
+	background: var(--theme--surface--color--accent);
+	color: var(--theme--text--Color--accent);
+	font-family: var(--theme--code--FontFamily);
+	font-size: 0.75rem;
+	font-weight: var(--theme--FontWeight--medium);
+	letter-spacing: 0.03em;
+	border-radius: 999px;
+}
+
+.hero h1 {
+	margin: 0 0 0.85rem;
+	font-family: var(--theme--code--FontFamily);
+	font-weight: var(--theme--FontWeight--bold);
+	font-size: clamp(2.75rem, 7vw, 4.5rem);
+	line-height: var(--theme--LineHeight--dense);
+	color: var(--theme--text--Color--accent);
+	letter-spacing: -0.01em;
+}
+
+.hero .tagline {
+	font-family: var(--theme--text--FontFamily--dense);
+	font-size: clamp(1.1rem, 2vw, 1.4rem);
+	color: var(--theme--text--Color--subtle);
+	margin: 0 auto 1.75rem;
+	max-width: 38rem;
+	line-height: var(--theme--LineHeight);
+}
+
+.badges {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.4rem;
+	justify-content: center;
+	margin: 0 0 1.75rem;
+}
+
+.badges img {
+	height: 20px;
+}
+
+.cta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.75rem;
+	justify-content: center;
+	margin: 0;
+}
+
+.btn {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+	padding: 0.7rem 1.5rem;
+	border-radius: var(--theme--BorderRadius);
+	border: var(--theme--BorderWidth--thin) solid var(--theme--ui--color--border);
+	background: var(--theme--surface--color--emphasis);
+	color: var(--theme--text--Color);
+	font-weight: var(--theme--FontWeight--medium);
+	font-family: inherit;
+	font-size: 0.95rem;
+	transition:
+		transform 0.08s ease,
+		box-shadow 0.15s ease,
+		background 0.15s ease;
+}
+
+.btn:hover,
+.btn:focus-visible {
+	text-decoration: none;
+	transform: translateY(-1px);
+	box-shadow: var(--theme--card--shadow);
+}
+
+.btn-primary {
+	background: var(--base);
+	color: var(--theme--text--Color--invert);
+	border-color: var(--base);
+}
+
+.btn-primary:hover,
+.btn-primary:focus-visible {
+	color: var(--theme--text--Color--invert);
+	background: color-mix(in oklch, var(--base) 88%, black);
+}
+
+/* ============================================================
+   SECTIONS
+   ============================================================ */
+main {
+	max-width: min(var(--theme--container--MaxWidth), 72rem);
+}
+
+section {
+	padding-block: 3rem;
+	border-top: var(--theme--BorderWidth--thin) solid var(--theme--ui--color--border);
+}
+
+.section-head {
+	margin-bottom: 1.5rem;
+	max-width: var(--theme--content--MaxWidth);
+}
+
+.section-lede {
+	color: var(--theme--text--Color--subtle);
+	font-size: 1rem;
+	margin: 0;
+	max-width: 60ch;
+}
+
+.prose {
+	max-width: var(--theme--content--MaxWidth);
+}
+
+h2 {
+	margin: 0 0 0.5rem;
+	font-family: var(--theme--heading--FontFamily), sans-serif;
+	font-weight: var(--theme--FontWeight--bold);
+	font-size: 1.75rem;
+	line-height: var(--theme--heading--LineHeight);
+	letter-spacing: -0.01em;
+}
+
+h2 .anchor {
+	color: var(--theme--text--Color--subtle);
+	margin-left: 0.4rem;
+	opacity: 0;
+	transition: opacity 0.15s ease;
+	font-weight: var(--theme--FontWeight);
+}
+
+h2:hover .anchor,
+h2 .anchor:focus-visible {
+	opacity: 1;
+}
+
+p {
+	margin: 0 0 1rem;
+}
+
+ul {
+	padding-inline-start: 1.25rem;
+}
+
+li {
+	margin-block: 0.25rem;
+}
+
+/* ============================================================
+   FEATURED SKILL CALLOUT
+   ============================================================ */
+.featured {
+	border-top: 0;
+	padding-block-start: 1rem;
+}
+
+.featured-card {
+	display: grid;
+	grid-template-columns: 1.2fr 1fr;
+	gap: 2rem;
+	padding: clamp(1.5rem, 3vw, 2.5rem);
+	border-radius: var(--theme--BorderRadius);
+	background:
+		linear-gradient(
+			135deg,
+			var(--theme--surface--color--accent) 0%,
+			var(--theme--surface--color--emphasis) 100%
+		);
+	border: var(--theme--BorderWidth--thin) solid var(--theme--ui--color--border);
+	box-shadow: var(--theme--card--shadow);
+}
+
+@media (width <= 720px) {
+	.featured-card {
+		grid-template-columns: 1fr;
+	}
+}
+
+.featured-body h2 {
+	margin: 0.25rem 0 0.75rem;
+	font-family: var(--theme--code--FontFamily);
+	font-size: clamp(1.75rem, 3.5vw, 2.4rem);
+}
+
+.featured-body h2 a {
+	color: var(--theme--text--Color);
+}
+
+.featured-body h2 a:hover,
+.featured-body h2 a:focus-visible {
+	color: var(--theme--text--Color--accent);
+	text-decoration: none;
+}
+
+.featured-description {
+	color: var(--theme--text--Color--subtle);
+	font-size: 1.02rem;
+	line-height: var(--theme--LineHeight--spacious);
+	margin-bottom: 1.25rem;
+	display: -webkit-box;
+	-webkit-line-clamp: 5;
+	-webkit-box-orient: vertical;
+	overflow: hidden;
+}
+
+.featured-cta {
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.6rem;
+	margin: 0;
+}
+
+.featured-side {
+	display: flex;
+	flex-direction: column;
+	gap: 0.5rem;
+	background: var(--theme--surface--color);
+	border: var(--theme--BorderWidth--thin) solid var(--theme--ui--color--border);
+	border-radius: var(--theme--BorderRadius);
+	padding: 1.1rem 1.25rem;
+}
+
+.featured-side-label {
+	margin: 0;
+	font-family: var(--theme--code--FontFamily);
+	font-size: 0.75rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+	color: var(--theme--text--Color--subtle);
+}
+
+.featured-side pre {
+	margin: 0;
+	background: transparent;
+	border: 0;
+	border-inline-start: 0;
+	padding: 0;
+}
+
+/* ============================================================
+   SKILL CARDS
+   ============================================================ */
+.skill-grid {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.skill-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.75rem;
+	background: var(--theme--surface--color--emphasis);
+	border: var(--theme--BorderWidth--thin) solid var(--theme--ui--color--border);
+	border-radius: var(--theme--BorderRadius);
+	padding: 1.4rem;
+	transition:
+		transform 0.12s ease,
+		box-shadow 0.15s ease,
+		border-color 0.15s ease;
+}
+
+.skill-card:hover,
+.skill-card:focus-within {
+	transform: translateY(-2px);
+	box-shadow: var(--theme--card--shadow);
+	border-color: var(--theme--text--Color--accent);
+}
+
+.skill-card-featured {
+	border-color: var(--theme--text--Color--accent);
+}
+
+.skill-card-head {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	margin-bottom: 0.25rem;
+}
+
+.skill-card h3 {
+	margin: 0;
+	font-family: var(--theme--code--FontFamily);
+	font-size: 1.05rem;
+	font-weight: var(--theme--FontWeight--bold);
+}
+
+.skill-card h3 a {
+	color: inherit;
+}
+
+.skill-card h3 a:hover,
+.skill-card h3 a:focus-visible {
+	color: var(--theme--text--Color--accent);
+	text-decoration: none;
+}
+
+.skill-card-description {
+	color: var(--theme--text--Color--subtle);
+	font-size: 0.95rem;
+	margin: 0;
+}
+
+.skill-card .meta {
+	font-size: 0.8rem;
+	color: var(--theme--text--Color--subtle);
+	margin: 0;
+	display: flex;
+	flex-wrap: wrap;
+	gap: 0.3rem;
+	align-items: baseline;
+}
+
+.skill-card .meta-label {
+	font-weight: var(--theme--FontWeight--semi-bold);
+	color: var(--theme--text--Color);
+	margin-right: 0.25rem;
+}
+
+.skill-card .meta code {
+	background: var(--theme--surface--color);
+	padding: 0.1rem 0.4rem;
+	border-radius: var(--theme--BorderRadius--tight);
+	border: var(--theme--BorderWidth--thin) solid var(--theme--ui--color--border);
+	font-size: 0.78rem;
+}
+
+.skill-card-cta {
+	margin: auto 0 0;
+	font-size: 0.9rem;
+	font-weight: var(--theme--FontWeight--medium);
+}
+
+/* ============================================================
+   CHIPS
+   ============================================================ */
+.chip {
+	display: inline-block;
+	padding: 0.15rem 0.55rem;
+	font-size: 0.7rem;
+	font-weight: var(--theme--FontWeight--semi-bold);
+	text-transform: uppercase;
+	letter-spacing: 0.04em;
+	border-radius: 999px;
+	background: var(--theme--surface--color--accent);
+	color: var(--theme--text--Color--accent);
+	border: var(--theme--BorderWidth--thin) solid currentColor;
+	vertical-align: middle;
+}
+
+.chip-recommended {
+	background: var(--base);
+	color: var(--theme--text--Color--invert);
+	border-color: var(--base);
+}
+
+/* ============================================================
+   HARNESS CARDS (install section)
+   ============================================================ */
+.harness-grid {
+	display: grid;
+	gap: 1rem;
+	grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+	margin-bottom: 1.5rem;
+}
+
+.harness-card {
+	display: flex;
+	flex-direction: column;
+	gap: 0.85rem;
+	background: var(--theme--surface--color--emphasis);
+	border: var(--theme--BorderWidth--thin) solid var(--theme--ui--color--border);
+	border-radius: var(--theme--BorderRadius);
+	padding: 1.4rem;
+	transition:
+		transform 0.12s ease,
+		box-shadow 0.15s ease;
+}
+
+.harness-card-recommended {
+	border-color: var(--theme--text--Color--accent);
+	background:
+		linear-gradient(
+			180deg,
+			var(--theme--surface--color--accent) 0%,
+			var(--theme--surface--color--emphasis) 60%
+		);
+}
+
+.harness-card-head {
+	display: flex;
+	gap: 0.85rem;
+	align-items: flex-start;
+
+	> div {
+		flex-grow: 1;
+	}
+}
+
+.harness-icon {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	width: 2.5rem;
+	height: 2.5rem;
+	flex-shrink: 0;
+	color: var(--theme--text--Color--accent);
+	font-size: 1.1rem;
+}
+
+.harness-card h3 {
+	margin: 0;
+	font-size: 1.1rem;
+	font-weight: var(--theme--FontWeight--bold);
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 0.5rem;
+	flex-wrap: wrap;
+}
+
+.harness-tagline {
+	margin: 0.1rem 0 0;
+	font-size: 0.85rem;
+	color: var(--theme--text--Color--subtle);
+}
+
+.harness-description {
+	margin: 0;
+	color: var(--theme--text--Color--subtle);
+	font-size: 0.92rem;
+}
+
+.harness-card pre {
+	margin: auto 0 0;
+}
+
+.install-note {
+	color: var(--theme--text--Color--subtle);
+	font-size: 0.88rem;
+	margin: 0;
+	max-width: var(--theme--content--MaxWidth);
+}
+
+/* ============================================================
+   CODE
+   ============================================================ */
+pre {
+	background: var(--theme--surface--color--sunken);
+	border: var(--theme--BorderWidth--thin) solid var(--theme--ui--color--border);
+	border-radius: var(--theme--BorderRadius);
+	border-inline-start: var(--theme--BorderWidth) solid var(--base);
+	padding: 1rem 1.1rem;
+	overflow-x: auto;
+	margin: 0 0 1rem;
+}
+
+pre,
+code {
+	font-family: var(--theme--code--FontFamily);
+	font-size: var(--theme--code--FontSize);
+	line-height: var(--theme--code--LineHeight);
+}
+
+pre code {
+	font-size: inherit;
+}
+
+p code,
+li code,
+.section-lede code,
+.harness-description code,
+.featured-description code {
+	background: var(--theme--surface--color--emphasis);
+	padding: 0.1rem 0.4rem;
+	border-radius: var(--theme--BorderRadius--tight);
+	border: var(--theme--BorderWidth--thin) solid var(--theme--ui--color--border);
+}
+
+/* ============================================================
+   FOOTER
+   ============================================================ */
+.site-footer {
+	padding-block: 3rem 3rem;
+	border-top: var(--theme--BorderWidth--thin) solid var(--theme--ui--color--border);
+	margin-top: 2rem;
+
+	display: grid;
+	gap: 2rem;
+	grid-template-columns: 1.5fr repeat(3, 1fr);
+}
+
+@media (width <= 720px) {
+	.site-footer {
+		grid-template-columns: 1fr 1fr;
+	}
+}
+
+@media (width <= 480px) {
+	.site-footer {
+		grid-template-columns: 1fr;
+	}
+}
+
+.footer-col {
+	color: var(--theme--text--Color--subtle);
+	font-size: 0.9rem;
+}
+
+.footer-col ul {
+	list-style: none;
+	padding: 0;
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.45rem;
+}
+
+.footer-col a {
+	color: var(--theme--text--Color);
+	display: inline-flex;
+	align-items: center;
+	gap: 0.4rem;
+}
+
+.footer-col a:hover,
+.footer-col a:focus-visible {
+	color: var(--theme--text--Color--accent);
+}
+
+.footer-title {
+	margin: 0 0 0.6rem;
+	color: var(--theme--text--Color);
+	font-weight: var(--theme--FontWeight--semi-bold);
+	font-size: 0.85rem;
+	text-transform: uppercase;
+	letter-spacing: 0.06em;
+}
+
+.footer-brand .footer-title {
+	font-family: var(--theme--code--FontFamily);
+	text-transform: none;
+	letter-spacing: 0;
+	font-size: 1.1rem;
+}
+
+.footer-tagline {
+	margin: 0 0 0.5rem;
+	color: var(--theme--text--Color--subtle);
+}
+
+.footer-meta {
+	margin: 0;
+	font-size: 0.8rem;
+}</style>
 	</head>
 	<body>
-		<a class="skip-link" href="#main">Skip to content</a>
+        
 
-		<header>
-			<h1>@allons-y/agent-skills</h1>
-			<p class="tagline">
-				Specialized agent skills that streamline common developer workflows and
-				reduce token usage.
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="site-header">
+	<div class="hero">
+		<p class="eyebrow">@allons-y/agent-skills · v1.0.3</p>
+		<h1>@allons-y/agent-skills</h1>
+		<p class="tagline">Specialized agent skills that streamline common developer workflows and reduce token usage.</p>
+		<p class="badges" aria-label="Project badges">
+			<a href="https://github.com/Allons-y-Studio/agent-skills/actions/workflows/test.yml"><img alt="CI status" src="https://github.com/Allons-y-Studio/agent-skills/actions/workflows/test.yml/badge.svg?branch=main"></a>
+			<a href="https://www.npmjs.com/package/@allons-y/agent-skills"><img alt="npm version" src="https://img.shields.io/npm/v/@allons-y/agent-skills?logo=npm"></a>
+			<a href="https://www.npmjs.com/package/@allons-y/agent-skills"><img alt="npm downloads" src="https://img.shields.io/npm/dw/@allons-y/agent-skills?logo=npm"></a>
+			<img alt="Node 24+" src="https://img.shields.io/badge/node-%3E%3D24-brightgreen?logo=node.js">
+			<img alt="License: MPL-2.0" src="https://img.shields.io/badge/license-MPL--2.0-blue.svg">
+		</p>
+		<p class="cta">
+			<a class="btn btn-primary" href="#install">Get started</a>
+			<a class="btn" href="https://hub.com/Allons-y-Studio/agent-skills"><span class="fa-brands fa-github" aria-hidden="true"></span> View on GitHub</a>
+		</p>
+	</div>
+</header>
+
+<main id="main">
+	<section id="what" aria-labelledby="what-heading">
+		<div class="section-head">
+			<h2 id="what-heading">
+				What is this?
+				<a class="anchor" href="#what" aria-label="Permalink to What is this?">#</a>
+			</h2>
+		</div>
+		<div class="prose">
+			<p>
+				<strong>Agent skills</strong> are bite-sized, self-contained capability
+				packs you can drop into an AI coding agent. Each skill bundles a
+				<code>SKILL.md</code> (the prompt and trigger description), a
+				Node.js implementation, and a test suite — all under one directory.
 			</p>
-			<p class="badges" aria-label="Project badges">
-				<a
-					href="https://github.com/Allons-y-Studio/agent-skills/actions/workflows/test.yml"
-					><img
-						alt="CI status"
-						src="https://github.com/Allons-y-Studio/agent-skills/actions/workflows/test.yml/badge.svg?branch=main"
-				/></a>
-				<a href="https://www.npmjs.com/package/@allons-y/agent-skills"
-					><img
-						alt="npm version"
-						src="https://img.shields.io/npm/v/@allons-y/agent-skills?logo=npm"
-				/></a>
-				<a href="https://www.npmjs.com/package/@allons-y/agent-skills"
-					><img
-						alt="npm downloads"
-						src="https://img.shields.io/npm/dw/@allons-y/agent-skills?logo=npm"
-				/></a>
-				<img
-					alt="Node 24+"
-					src="https://img.shields.io/badge/node-%3E%3D24-brightgreen?logo=node.js"
-				/>
-				<img
-					alt="License: MPL-2.0"
-					src="https://img.shields.io/badge/license-MPL--2.0-blue.svg"
-				/>
+			<p>
+				Claude Code installs them natively via the plugin marketplace. Other
+				agent harnesses — Cursor, OpenCode, Aider, or anything built on the
+				Claude Agent SDK — can vendor any skill directory with one
+				<code>npx</code> command. No Claude-specific wiring.
 			</p>
-			<p class="cta">
-				<a class="btn btn-primary" href="#install">Get started</a>
-				<a class="btn" href="https://github.com/Allons-y-Studio/agent-skills"
-					>View on GitHub</a
-				>
-			</p>
-		</header>
+		</div>
+	</section>
 
-		<main id="main">
-			<section id="what" aria-labelledby="what-heading">
-				<h2 id="what-heading">
-					What is this?
-					<a class="anchor" href="#what" aria-label="Permalink to What is this?"
-						>#</a
-					>
-				</h2>
-				<p>
-					<strong>Agent skills</strong> are bite-sized, self-contained capability
-					packs you can drop into an AI coding agent. Each skill bundles a
-					<code>SKILL.md</code> (the prompt and trigger description), a
-					Node.js implementation, and a test suite — all under one directory.
+	
+
+	<section id="skills" aria-labelledby="skills-heading">
+		<div class="section-head">
+			<h2 id="skills-heading">
+				Available skills
+				<a class="anchor" href="#skills" aria-label="Permalink to Available skills">#</a>
+			</h2>
+			<p class="section-lede">All skills currently published in this marketplace.</p>
+		</div>
+		<div class="skill-grid">
+			<article class="skill-card skill-card-featured">
+				<header class="skill-card-head">
+					<h3><a href="https://hub.com/Allons-y-Studio/agent-skills/blob/main/skills/design-system/SKILL.md">design-system</a></h3>
+					<span class="chip chip-featured">Featured</span>
+				</header>
+				<p class="skill-card-description">Build, name, document, and audit UI components with expert ARIA, accessibility, design token, typography, and i18n guidance drawn from major design systems (Material, Spectrum, Carbon, Primer, and more).</p>
+				
+				<p class="meta">
+					<span class="meta-label">Triggers</span>
+					<code>"design system"</code> <code>"component library"</code> <code>"ARIA pattern"</code> <code>"what should I call this component"</code> <code>"review my component library"</code>
 				</p>
-				<p>
-					Claude Code installs them natively via the plugin marketplace. Other
-					agent harnesses — Cursor, OpenCode, Aider, or anything built on the
-					Claude Agent SDK — can vendor any skill directory with one
-					<code>npx</code> command. No Claude-specific wiring.
+				<p class="skill-card-cta">
+					<a href="https://hub.com/Allons-y-Studio/agent-skills/blob/main/skills/design-system/SKILL.md">Open SKILL.md <span aria-hidden="true">→</span></a>
 				</p>
-			</section>
-
-			<section id="skills" aria-labelledby="skills-heading">
-				<h2 id="skills-heading">
-					Available skills
-					<a class="anchor" href="#skills" aria-label="Permalink to Available skills"
-						>#</a
-					>
-				</h2>
-				<div class="skill-grid">
-					<article class="skill-card">
-						<h3>
-							<a
-								href="https://github.com/Allons-y-Studio/agent-skills/blob/main/skills/gh-notification-summary/SKILL.md"
-								>gh-notification-summary</a
-							>
-						</h3>
-						<p>
-							Review, summarize, and manage GitHub notifications via an
-							interactive local dashboard. Unsubscribe from noisy threads, mark
-							individual notifications or your whole inbox as done, all from a
-							single prompt.
-						</p>
-						<p class="triggers">
-							<strong>Triggers:</strong> <code>"check my GitHub notifications"</code>,
-							<code>/unsub &lt;number&gt;</code>, <code>"mark all done"</code>
-						</p>
-					</article>
-					<article class="skill-card">
-						<h3>
-							<a
-								href="https://github.com/Allons-y-Studio/agent-skills/blob/main/skills/design-system/SKILL.md"
-								>design-system</a
-							>
-						</h3>
-						<p>
-							Build, name, document, and audit UI components with expert ARIA,
-							accessibility, design token, typography, and i18n guidance drawn
-							from major design systems (Material, Spectrum, Carbon, Primer, and more).
-						</p>
-						<p class="triggers">
-							<strong>Triggers:</strong> <code>"design system"</code>,
-							<code>"component library"</code>, <code>"ARIA pattern"</code>,
-							<code>"what should I call this component"</code>
-						</p>
-					</article>
-				</div>
-			</section>
-
-			<section id="install" aria-labelledby="install-heading">
-				<h2 id="install-heading">
-					Install
-					<a class="anchor" href="#install" aria-label="Permalink to Install">#</a>
-				</h2>
-
-				<div class="install-variant">
-					<h3>Claude Code (recommended)</h3>
-					<p>
-						Register this repo as a marketplace, then install skills through the
-						<code>/plugin</code> UI.
-					</p>
-					<pre><code>/plugin marketplace add Allons-y-Studio/agent-skills
-/plugin install gh-notification-summary@agent-skills</code></pre>
-				</div>
-
-				<div class="install-variant">
-					<h3>Other agent harnesses</h3>
-					<p>
-						Use the <code>npx</code> installer to vendor any skill directory into
-						your agent's skill folder. The installed payload is plain — just
-						<code>SKILL.md</code> + scripts.
-					</p>
-					<pre><code># List available skills
-npx @allons-y/agent-skills
-
-# Install a skill to the default location (~/.claude/skills/)
-npx @allons-y/agent-skills gh-notification-summary
-
-# Install to your agent's skill directory
-npx @allons-y/agent-skills gh-notification-summary --dir ~/.config/cursor/skills
-
-# Install everything
-npx @allons-y/agent-skills --all</code></pre>
-					<p>
-						For Node-runtime skills with dependencies, run
-						<code>npm install</code> in the installed directory once vendored.
-					</p>
-				</div>
-			</section>
-
-			<section id="programmatic" aria-labelledby="programmatic-heading">
-				<h2 id="programmatic-heading">
-					Programmatic usage
-					<a
-						class="anchor"
-						href="#programmatic"
-						aria-label="Permalink to Programmatic usage"
-						>#</a
-					>
-				</h2>
-				<p>
-					Tool builders can enumerate skills dynamically via the exported
-					<code>getSkills()</code> helper:
+			</article><article class="skill-card">
+				<header class="skill-card-head">
+					<h3><a href="https://hub.com/Allons-y-Studio/agent-skills/blob/main/skills/dreamlight-valley/SKILL.md">dreamlight-valley</a></h3>
+					
+				</header>
+				<p class="skill-card-description">Cooking, gathering, and inventory management for Dreamlight Valley.</p>
+				
+				<p class="meta">
+					<span class="meta-label">Triggers</span>
+					<code>"/cook &lt;flags&gt; &lt;ingredients&gt;"</code> <code>"/restock &lt;flags&gt;"</code> <code>"/recipe &lt;dish name&gt;"</code> <code>"any request related to the video game Dreamlight Valley"</code>
 				</p>
-				<pre><code>import { getSkills } from "@allons-y/agent-skills";
+				<p class="skill-card-cta">
+					<a href="https://hub.com/Allons-y-Studio/agent-skills/blob/main/skills/dreamlight-valley/SKILL.md">Open SKILL.md <span aria-hidden="true">→</span></a>
+				</p>
+			</article><article class="skill-card">
+				<header class="skill-card-head">
+					<h3><a href="https://hub.com/Allons-y-Studio/agent-skills/blob/main/skills/gh-notification-summary/SKILL.md">gh-notification-summary</a></h3>
+					
+				</header>
+				<p class="skill-card-description">Review, summarize, and manage GitHub notifications via an interactive local dashboard. Unsubscribe from noisy threads, mark individual notifications or your whole inbox as done, all from a single prompt.</p>
+				
+				<p class="meta">
+					<span class="meta-label">Triggers</span>
+					<code>"check my GitHub notifications"</code> <code>"/unsub &lt;number&gt;"</code> <code>"mark all done"</code> <code>"clear my GitHub inbox"</code> <code>"any request to triage, dismiss, or act on GitHub notifications"</code>
+				</p>
+				<p class="skill-card-cta">
+					<a href="https://hub.com/Allons-y-Studio/agent-skills/blob/main/skills/gh-notification-summary/SKILL.md">Open SKILL.md <span aria-hidden="true">→</span></a>
+				</p>
+			</article>
+		</div>
+	</section>
+
+	<section id="install" aria-labelledby="install-heading">
+		<div class="section-head">
+			<h2 id="install-heading">
+				Install
+				<a class="anchor" href="#install" aria-label="Permalink to Install">#</a>
+			</h2>
+			<p class="section-lede">Pick the card for your agent harness. Every install uses the same skill payload — there's no Claude-specific wiring inside <code>SKILL.md</code>.</p>
+		</div>
+		<div class="harness-grid">
+			<article class="harness-card harness-card-recommended" id="install-claude-code">
+				<header class="harness-card-head">
+					<span class="harness-icon" aria-hidden="true"><span class="fa-solid fa-bolt fa-xl"></span></span>
+					<div>
+						<h3>Claude Code <span class="chip chip-recommended">Recommended</span></h3>
+						<p class="harness-tagline">Native plugin install</p>
+					</div>
+				</header>
+				<p class="harness-description">Register this repo as a Claude Code marketplace, then install skills via the <code>/plugin</code> UI.</p>
+				<pre><code>/plugin marketplace add Allons-y-Studio/agent-skills
+/plugin install design-system@agent-skills</code></pre>
+			</article><article class="harness-card" id="install-claude-agent-sdk">
+				<header class="harness-card-head">
+					<span class="harness-icon" aria-hidden="true"><span class="fa-solid fa-cube fa-xl"></span></span>
+					<div>
+						<h3>Claude Agent SDK</h3>
+						<p class="harness-tagline">Vendor with npx</p>
+					</div>
+				</header>
+				<p class="harness-description">Drop any skill into your agent's <code>SKILL.md</code> directory. No Claude-specific wiring.</p>
+				<pre><code>npx @allons-y/agent-skills design-system --dir ~/.claude/skills</code></pre>
+			</article><article class="harness-card" id="install-cursor">
+				<header class="harness-card-head">
+					<span class="harness-icon" aria-hidden="true"><span class="fa-solid fa-arrow-pointer fa-xl"></span></span>
+					<div>
+						<h3>Cursor</h3>
+						<p class="harness-tagline">Vendor with npx</p>
+					</div>
+				</header>
+				<p class="harness-description">Cursor reads skill folders from your project. Vendor the skill, then point Cursor at it.</p>
+				<pre><code>npx @allons-y/agent-skills design-system --dir .cursor/skills</code></pre>
+			</article><article class="harness-card" id="install-any">
+				<header class="harness-card-head">
+					<span class="harness-icon" aria-hidden="true"><span class="fa-solid fa-puzzle-piece fa-xl"></span></span>
+					<div>
+						<h3>Any other harness</h3>
+						<p class="harness-tagline">Pick your own directory</p>
+					</div>
+				</header>
+				<p class="harness-description">Aider, OpenCode, or anything that reads <code>SKILL.md</code> directories. Choose your target folder.</p>
+				<pre><code>npx @allons-y/agent-skills --list
+npx @allons-y/agent-skills design-system --dir &lt;your-skills-dir&gt;</code></pre>
+			</article>
+		</div>
+		<p class="install-note">
+			For Node-runtime skills with dependencies, run
+			<code>npm install</code> in the vendored directory once.
+		</p>
+	</section>
+
+	<section id="programmatic" aria-labelledby="programmatic-heading">
+		<div class="section-head">
+			<h2 id="programmatic-heading">
+				Programmatic usage
+				<a class="anchor" href="#programmatic" aria-label="Permalink to Programmatic usage">#</a>
+			</h2>
+			<p class="section-lede">Tool builders can enumerate skills dynamically via the exported <code>getSkills()</code> helper.</p>
+		</div>
+		<pre><code>import { getSkills } from "@allons-y/agent-skills";
 
 const skills = getSkills();
 // =>
 // [
 //   {
-//     name: "gh-notification-summary",
-//     path: "/path/to/skills/gh-notification-summary",
-//     description: "Review, summarize, and manage GitHub notifications...",
-//     mdPath: "/path/to/skills/gh-notification-summary/SKILL.md",
+//     name: "design-system",
+//     path: "/path/to/skills/design-system",
+//     description: "Build, name, document, and audit UI components...",
+//     mdPath: "/path/to/skills/design-system/SKILL.md",
 //   },
 //   ...
 // ]</code></pre>
-			</section>
+	</section>
 
-			<section id="contributing" aria-labelledby="contributing-heading">
-				<h2 id="contributing-heading">
-					Contributing
-					<a
-						class="anchor"
-						href="#contributing"
-						aria-label="Permalink to Contributing"
-						>#</a
-					>
-				</h2>
-				<p>
-					New skills, improvements, bug fixes, and documentation are all welcome.
-					See
-					<a
-						href="https://github.com/Allons-y-Studio/agent-skills/blob/main/.github/CONTRIBUTING.md"
-						>CONTRIBUTING.md</a
-					>
-					for environment setup, the test/lint/eval workflow, and the PR
-					checklist.
-				</p>
-				<p>Some ideas if you're looking for a starting point:</p>
-				<ul>
-					<li>GitHub PR review summarizer</li>
-					<li>Linear / Jira issue triage</li>
-					<li>Slack digest summarizer</li>
-					<li>Daily standup generator from git log</li>
-					<li>
-						Accessibility audit runner (pairs nicely with
-						<code>design-system</code>)
-					</li>
-				</ul>
-			</section>
-		</main>
+	<section id="contributing" aria-labelledby="contributing-heading">
+		<div class="section-head">
+			<h2 id="contributing-heading">
+				Contributing
+				<a class="anchor" href="#contributing" aria-label="Permalink to Contributing">#</a>
+			</h2>
+		</div>
+		<div class="prose">
+			<p>
+				New skills, improvements, bug fixes, and documentation are all welcome.
+				See <a href="https://hub.com/Allons-y-Studio/agent-skills/blob/main/.github/CONTRIBUTING.md">CONTRIBUTING.md</a>
+				for environment setup, the test/lint/eval workflow, and the PR
+				checklist.
+			</p>
+			<p>Some ideas if you're looking for a starting point:</p>
+			<ul>
+				<li>GitHub PR review summarizer</li>
+				<li>Linear / Jira issue triage</li>
+				<li>Slack digest summarizer</li>
+				<li>Daily standup generator from git log</li>
+				<li>Accessibility audit runner (pairs nicely with <code>design-system</code>)</li>
+			</ul>
+		</div>
+	</section>
+</main>
 
-		<footer>
-			<p>
-				Licensed under
-				<a
-					href="https://github.com/Allons-y-Studio/agent-skills/blob/main/LICENSE"
-					>MPL-2.0</a
-				>
-				·
-				<a href="https://github.com/Allons-y-Studio/agent-skills">GitHub</a> ·
-				<a href="https://www.npmjs.com/package/@allons-y/agent-skills">npm</a>
-			</p>
-			<p>
-				Built and maintained by
-				<a href="https://allons-y.studio">Allons-y Studio</a> · Cassondra
-				Roberts.
-			</p>
-		</footer>
+<footer class="site-footer">
+	<div class="footer-col footer-brand">
+		<p class="footer-title">@allons-y/agent-skills</p>
+		<p class="footer-tagline">Specialized skills for ai coding agents.</p>
+		<p class="footer-meta"><a href="https://hub.com/Allons-y-Studio/agent-skills/blob/main/LICENSE">Licensed under MPL-2.0</a></p>
+	</div>
+	<div class="footer-col">
+		<p class="footer-title">Resources</p>
+		<ul>
+			<li><a href="https://hub.com/Allons-y-Studio/agent-skills"><span class="fa-brands fa-github" aria-hidden="true"></span> GitHub</a></li>
+			<li><a href="https://www.npmjs.com/package/@allons-y/agent-skills"><span class="fa-brands fa-npm" aria-hidden="true"></span> npm</a></li>
+		</ul>
+	</div>
+	<div class="footer-col">
+		<p class="footer-title">Resources</p>
+		<ul>
+			<li><a href="https://hub.com/Allons-y-Studio/agent-skills/issues">Report an issue</a></li>
+			<li><a href="https://hub.com/Allons-y-Studio/agent-skills/blob/main/.github/CONTRIBUTING.md">Contributing guide</a></li>
+		</ul>
+	</div>
+	<div class="footer-col">
+		<p class="footer-title">brought to you by</p>
+		<a href="https://allons-y.studio"><img src="./assets/allons-y_studio.svg" alt="Allons-y Studio logo" width="200" height="100"></a>
+	</div>
+</footer>
+
+
+        
 	</body>
 </html>
